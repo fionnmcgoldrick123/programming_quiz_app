@@ -106,7 +106,56 @@ function CodeSandboxPage() {
         <div className="sandbox-container">
             <Navbar />
             <div className="sandbox-main">
-                {/* Left Panel - Question */}
+                {/* Left Panel - Editor */}
+                <div className="sandbox-editor-panel">
+                    <div className="sandbox-editor-header">
+                        <span className="sandbox-language-badge">{language.toUpperCase()}</span>
+                    </div>
+                    
+                    <div className="sandbox-editor-wrapper">
+                        <Editor
+                            height="60vh"
+                            language={languageMap[language.toLowerCase()] || "javascript"}
+                            value={code}
+                            onChange={(value) => setCode(value ?? "")}
+                            theme="vs-dark"
+                            options={{
+                                fontSize: 14,
+                                fontFamily: "'Fira Code', monospace",
+                                minimap: { enabled: false },
+                                scrollBeyondLastLine: false,
+                                padding: { top: 16, bottom: 16 },
+                                lineNumbers: "on",
+                                roundedSelection: true,
+                                automaticLayout: true,
+                            }}
+                        />
+                    </div>
+
+                    <div className="sandbox-output-section">
+                        <h3 className="sandbox-output-title">Output</h3>
+                        <div className="sandbox-output-box">
+                            <pre>{output || "Run your code to see output..."}</pre>
+                        </div>
+                    </div>
+
+                    <div className="sandbox-button-group">
+                        <button 
+                            className="sandbox-run-button"
+                            onClick={handleRunCode}
+                        >
+                            Run Code
+                        </button>
+                        <button 
+                            className="sandbox-submit-button"
+                            onClick={handleSubmit}
+                        >
+                            Submit Solution
+                        </button>
+                    </div>
+                </div>
+
+                {/* Right Panel - Question */}
                 <div className="sandbox-question-panel">
                     <div className="sandbox-progress-section">
                         <p className="sandbox-progress-text">
@@ -145,55 +194,6 @@ function CodeSandboxPage() {
                                 </ul>
                             </div>
                         )}
-                    </div>
-                </div>
-
-                {/* Right Panel - Editor */}
-                <div className="sandbox-editor-panel">
-                    <div className="sandbox-editor-header">
-                        <span className="sandbox-language-badge">{language.toUpperCase()}</span>
-                    </div>
-                    
-                    <div className="sandbox-editor-wrapper">
-                        <Editor
-                            height="60vh"
-                            language={languageMap[language.toLowerCase()] || "javascript"}
-                            value={code}
-                            onChange={(value) => setCode(value ?? "")}
-                            theme="vs-dark"
-                            options={{
-                                fontSize: 14,
-                                fontFamily: "'Fira Code', monospace",
-                                minimap: { enabled: false },
-                                scrollBeyondLastLine: false,
-                                padding: { top: 16, bottom: 16 },
-                                lineNumbers: "on",
-                                roundedSelection: true,
-                                automaticLayout: true,
-                            }}
-                        />
-                    </div>
-
-                    <div className="sandbox-output-section">
-                        <h3 className="sandbox-output-title">Output</h3>
-                        <div className="sandbox-output-box">
-                            <pre>{output || "Run your code to see output..."}</pre>
-                        </div>
-                    </div>
-
-                    <div className="sandbox-button-group">
-                        <button 
-                            className="sandbox-run-button"
-                            onClick={handleRunCode}
-                        >
-                            ▶ Run Code
-                        </button>
-                        <button 
-                            className="sandbox-submit-button"
-                            onClick={handleSubmit}
-                        >
-                            Submit Solution
-                        </button>
                     </div>
                 </div>
             </div>

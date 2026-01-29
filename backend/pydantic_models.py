@@ -33,3 +33,6 @@ class UserResponse(BaseModel):
     level: int
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+class AddXpRequest(BaseModel):
+    xp_amount: int

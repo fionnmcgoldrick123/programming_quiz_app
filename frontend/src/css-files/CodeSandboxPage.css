@@ -15,11 +15,19 @@
     gap: 0;
 }
 
-/* Left Panel - Question */
+/* Left Panel - Editor (now first in flex) */
+.sandbox-editor-panel {
+    width: 60%;
+    display: flex;
+    flex-direction: column;
+    background-color: #1e1e1e;
+    border-right: 2px solid #ff9500;
+}
+
+/* Right Panel - Question */
 .sandbox-question-panel {
     width: 40%;
     background-color: #1e1e1e;
-    border-right: 2px solid #ff9500;
     padding: 1.5rem;
     overflow-y: auto;
 }
@@ -110,14 +118,6 @@
 .sandbox-hints li {
     margin-bottom: 0.5rem;
     line-height: 1.5;
-}
-
-/* Right Panel - Editor */
-.sandbox-editor-panel {
-    width: 60%;
-    display: flex;
-    flex-direction: column;
-    background-color: #1e1e1e;
 }
 
 .sandbox-editor-header {

@@ -9,7 +9,7 @@ import bcrypt
 import jwt
 from datetime import datetime, timedelta
 import json
-from pydantic_models import PromptRequest, RegisterRequest, ModelRequest, LoginRequest, UserResponse
+from pydantic_models import PromptRequest, RegisterRequest, ModelRequest, LoginRequest, UserResponse, AddXpRequest
 from parsers.parser_openai import openai_parser
 from parsers.parser_ollama import ollama_parser
 
@@ -335,4 +335,73 @@ async def get_current_user(token_data: dict = Depends(verify_token)):
         "level": user["level"],
         "created_at": user["created_at"].isoformat() if user["created_at"] else None,
         "updated_at": user["updated_at"].isoformat() if user["updated_at"] else None
+    }
+
+# --- Add XP Endpoint ---
+
+@app.post("/add-xp")
+async def add_xp(xp_data: AddXpRequest, token_data: dict = Depends(verify_token)):
+    """
+    Add XP to the authenticated user's account.
+    
+    Args:
+        xp_data (AddXpRequest): The XP amount to add.
+        token_data (dict): The decoded JWT token data.
+        
+    Returns:
+        dict: Updated user data with new XP and level.
+    """
+    user_id = token_data["user_id"]
+    xp_to_add = xp_data.xp_amount
+    
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Get current XP and level
+            cur.execute(
+                """
+                SELECT exp, level
+                FROM users
+                WHERE id = %s
+                LIMIT 1;
+                """,
+                (user_id,)
+            )
+            user = cur.fetchone()
+            
+            if not user:
+                raise HTTPException(status_code=404, detail="User not found")
+            
+            current_exp = user["exp"] or 0
+            current_level = user["level"] or 1
+            
+            # Calculate new XP and level
+            new_exp = current_exp + xp_to_add
+            
+            # Level up logic: 100 XP per level
+            xp_per_level = 100
+            new_level = (new_exp // xp_per_level) + 1
+            
+            # Update user's XP and level
+            cur.execute(
+                """
+                UPDATE users
+                SET exp = %s, level = %s, updated_at = NOW()
+                WHERE id = %s
+                RETURNING id, first_name, second_name, email, exp, level, created_at, updated_at;
+                """,
+                (new_exp, new_level, user_id)
+            )
+            updated_user = cur.fetchone()
+            conn.commit()
+    
+    return {
+        "id": updated_user["id"],
+        "first_name": updated_user["first_name"],
+        "second_name": updated_user["second_name"],
+        "email": updated_user["email"],
+        "exp": updated_user["exp"],
+        "level": updated_user["level"],
+        "created_at": updated_user["created_at"].isoformat() if updated_user["created_at"] else None,
+        "updated_at": updated_user["updated_at"].isoformat() if updated_user["updated_at"] else None,
+        "xp_gained": xp_to_add
     }

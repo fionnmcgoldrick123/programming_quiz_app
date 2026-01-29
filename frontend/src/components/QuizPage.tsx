@@ -1,6 +1,9 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Navbar from "./Navbar";
+import { useAuth } from "../utils/AuthContext";
+
+const XP_PER_CORRECT = 10;
 
 const quizStyles = {
     container: {
@@ -134,12 +137,37 @@ const quizStyles = {
 function QuizPage() {
     const location = useLocation();
     const quiz = location.state?.quizData ?? [];
+    const { token, updateUser } = useAuth();
 
     const navigate = useNavigate();
 
     const [currentIndex, setCurrentIndex] = useState(0);
     const [finished, setFinished] = useState(false);
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
+    const [showXpAnimation, setShowXpAnimation] = useState(false);
+    const [totalXpEarned, setTotalXpEarned] = useState(0);
+
+    async function addXpToUser() {
+        if (!token) return;
+        
+        try {
+            const response = await fetch('http://127.0.0.1:8000/add-xp', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ xp_amount: XP_PER_CORRECT })
+            });
+
+            if (response.ok) {
+                const updatedUser = await response.json();
+                updateUser(updatedUser);
+            }
+        } catch (error) {
+            console.error("Error adding XP:", error);
+        }
+    }
 
     if (!quiz.length) {
         return (
@@ -178,14 +206,22 @@ function QuizPage() {
         const isCorrect = letterFromIndex === currentQ.correct_answer;
 
         if (!isCorrect) {
-            setFeedbackMessage("❌ Incorrect! Try again.");
+            setFeedbackMessage("Incorrect! Try again.");
             setTimeout(() => setFeedbackMessage(null), 1500);
             return;
         }
 
-        setFeedbackMessage("✅ Correct!");
+        // Show XP animation
+        setShowXpAnimation(true);
+        setTotalXpEarned(prev => prev + XP_PER_CORRECT);
+        
+        // Add XP to user account
+        addXpToUser();
+
+        setFeedbackMessage("Correct!");
         setTimeout(() => {
             setFeedbackMessage(null);
+            setShowXpAnimation(false);
             if (currentIndex + 1 < quiz.length) {
                 setCurrentIndex(currentIndex + 1);
             } else {
@@ -200,9 +236,41 @@ function QuizPage() {
                 <Navbar />
                 <div style={quizStyles.content}>
                     <div style={{ ...quizStyles.card, ...quizStyles.completeContainer }}>
-                        <div style={quizStyles.completeEmoji}>🎉</div>
+                        <div style={{
+                            width: '80px',
+                            height: '80px',
+                            margin: '0 auto 24px',
+                            background: 'linear-gradient(135deg, #ff9500 0%, #ff7700 100%)',
+                            borderRadius: '50%',
+                            position: 'relative' as const,
+                            boxShadow: '0 8px 32px rgba(255, 149, 0, 0.4)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            <span style={{ 
+                                color: '#1a1a1a', 
+                                fontSize: '2rem', 
+                                fontWeight: 700 
+                            }}>✓</span>
+                        </div>
                         <h1 style={quizStyles.completeTitle}>Quiz Complete!</h1>
                         <p style={quizStyles.completeText}>Great job! You've completed all {quiz.length} questions.</p>
+                        <div style={{
+                            background: 'linear-gradient(135deg, rgba(255, 149, 0, 0.15) 0%, rgba(255, 119, 0, 0.1) 100%)',
+                            border: '1px solid rgba(255, 149, 0, 0.3)',
+                            borderRadius: '12px',
+                            padding: '16px 24px',
+                            marginBottom: '24px',
+                        }}>
+                            <p style={{
+                                color: '#ff9500',
+                                fontSize: '1.5rem',
+                                fontWeight: 700,
+                                margin: 0,
+                                fontFamily: "'Fira Code', monospace",
+                            }}>+{totalXpEarned} XP Earned!</p>
+                        </div>
                         <button 
                             style={quizStyles.backButton} 
                             onClick={() => navigate('/prompt')}
@@ -249,10 +317,40 @@ function QuizPage() {
                             color: feedbackMessage.includes('Correct') ? '#4caf50' : '#f44336',
                             fontFamily: "'Fira Code', monospace",
                             textAlign: 'center' as const,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: '12px',
                         }}>
-                            {feedbackMessage}
+                            <span>{feedbackMessage}</span>
+                            {showXpAnimation && (
+                                <span style={{
+                                    color: '#ff9500',
+                                    fontWeight: 700,
+                                    animation: 'xpFloat 0.8s ease-out forwards',
+                                }}>
+                                    +{XP_PER_CORRECT} XP
+                                </span>
+                            )}
                         </div>
                     )}
+
+                    <style>{`
+                        @keyframes xpFloat {
+                            0% {
+                                opacity: 0;
+                                transform: translateY(10px) scale(0.8);
+                            }
+                            50% {
+                                opacity: 1;
+                                transform: translateY(-5px) scale(1.1);
+                            }
+                            100% {
+                                opacity: 1;
+                                transform: translateY(0) scale(1);
+                            }
+                        }
+                    `}</style>
 
                     <div style={quizStyles.optionsContainer}>
                         {currentQ.options.map((opt: string, i: number) => (
