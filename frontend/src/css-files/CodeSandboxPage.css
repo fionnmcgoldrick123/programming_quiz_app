@@ -36,6 +36,48 @@
     margin-bottom: 1.5rem;
 }
 
+/* XP Status Bar */
+.sandbox-xp-bar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 14px;
+    margin-bottom: 1.25rem;
+    background-color: #252525;
+    border-radius: 10px;
+    border: 1px solid #3d3d3d;
+}
+
+.sandbox-xp-level {
+    color: #ff9500;
+    font-weight: 700;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.sandbox-xp-track {
+    flex: 1;
+    background-color: #3d3d3d;
+    border-radius: 6px;
+    height: 10px;
+    overflow: hidden;
+}
+
+.sandbox-xp-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff9500, #ffb347);
+    border-radius: 6px;
+    transition: width 0.4s ease;
+}
+
+.sandbox-xp-text {
+    color: #808080;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
 .sandbox-progress-text {
     color: #808080;
     font-size: 0.9rem;

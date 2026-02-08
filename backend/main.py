@@ -82,7 +82,10 @@ async def openai_request(prompt: PromptRequest):
     Returns:
         Parsed quiz data from the OpenAI model.
     """
-    prompt_request =  QUIZ_FORMAT_GUIDE + " \n" + prompt.prompt
+    prompt_request =  QUIZ_FORMAT_GUIDE + " \n"
+    if prompt.num_questions:
+        prompt_request += f"Generate exactly {prompt.num_questions} questions. \n"
+    prompt_request += prompt.prompt
     
     url = "https://api.openai.com/v1/chat/completions"
     
@@ -124,7 +127,10 @@ async def llama3_req(prompt: PromptRequest):
     Returns:
         Parsed quiz data from the local ollama model.
     """
-    prompt_request =  QUIZ_FORMAT_GUIDE + " \n" + prompt.prompt
+    prompt_request =  QUIZ_FORMAT_GUIDE + " \n"
+    if prompt.num_questions:
+        prompt_request += f"Generate exactly {prompt.num_questions} questions. \n"
+    prompt_request += prompt.prompt
     
     url = "http://localhost:11434/api/generate"
     
@@ -295,6 +301,7 @@ async def login(login_data: LoginRequest):
             "email": user["email"],
             "exp": user["exp"],
             "level": user["level"],
+            "xp_required": xp_for_level(user["level"]),
             "created_at": user["created_at"].isoformat() if user["created_at"] else None,
             "updated_at": user["updated_at"].isoformat() if user["updated_at"] else None
         }
@@ -333,9 +340,16 @@ async def get_current_user(token_data: dict = Depends(verify_token)):
         "email": user["email"],
         "exp": user["exp"],
         "level": user["level"],
+        "xp_required": xp_for_level(user["level"]),
         "created_at": user["created_at"].isoformat() if user["created_at"] else None,
         "updated_at": user["updated_at"].isoformat() if user["updated_at"] else None
     }
+
+# --- XP Helper ---
+
+def xp_for_level(level: int) -> int:
+    """XP required to advance from the given level. Scales each level."""
+    return 100 * level  # Level 1: 100, Level 2: 200, Level 3: 300 ...
 
 # --- Add XP Endpoint ---
 
@@ -343,13 +357,14 @@ async def get_current_user(token_data: dict = Depends(verify_token)):
 async def add_xp(xp_data: AddXpRequest, token_data: dict = Depends(verify_token)):
     """
     Add XP to the authenticated user's account.
+    XP is tracked per-level and resets to 0 on level-up.
     
     Args:
         xp_data (AddXpRequest): The XP amount to add.
         token_data (dict): The decoded JWT token data.
         
     Returns:
-        dict: Updated user data with new XP and level.
+        dict: Updated user data with new XP, level, and leveled_up flag.
     """
     user_id = token_data["user_id"]
     xp_to_add = xp_data.xp_amount
@@ -374,14 +389,19 @@ async def add_xp(xp_data: AddXpRequest, token_data: dict = Depends(verify_token)
             current_exp = user["exp"] or 0
             current_level = user["level"] or 1
             
-            # Calculate new XP and level
             new_exp = current_exp + xp_to_add
+            new_level = current_level
+            leveled_up = False
             
-            # Level up logic: 100 XP per level
-            xp_per_level = 100
-            new_level = (new_exp // xp_per_level) + 1
+            # Level up: check if XP exceeds the threshold for current level
+            xp_needed = xp_for_level(new_level)
+            while new_exp >= xp_needed:
+                new_exp -= xp_needed
+                new_level += 1
+                leveled_up = True
+                xp_needed = xp_for_level(new_level)
             
-            # Update user's XP and level
+            # Update user's XP and level in the database
             cur.execute(
                 """
                 UPDATE users
@@ -401,7 +421,10 @@ async def add_xp(xp_data: AddXpRequest, token_data: dict = Depends(verify_token)
         "email": updated_user["email"],
         "exp": updated_user["exp"],
         "level": updated_user["level"],
+        "xp_required": xp_for_level(updated_user["level"]),
         "created_at": updated_user["created_at"].isoformat() if updated_user["created_at"] else None,
         "updated_at": updated_user["updated_at"].isoformat() if updated_user["updated_at"] else None,
-        "xp_gained": xp_to_add
+        "xp_gained": xp_to_add,
+        "leveled_up": leveled_up,
+        "new_level": new_level if leveled_up else None
     }

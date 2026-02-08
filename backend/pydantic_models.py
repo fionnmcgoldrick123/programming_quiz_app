@@ -10,6 +10,7 @@ class QuizSchema(BaseModel):
     
 class PromptRequest(BaseModel):
     prompt: str
+    num_questions: Optional[int] = None
 
 class ModelRequest(BaseModel):
     model: str

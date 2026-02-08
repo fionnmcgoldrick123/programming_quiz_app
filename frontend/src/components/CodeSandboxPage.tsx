@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Editor from "@monaco-editor/react";
 import Navbar from "./Navbar";
+import { useAuth } from "../utils/AuthContext";
 import '../css-files/CodeSandboxPage.css';
 
 interface CodeQuestion {
@@ -14,6 +15,7 @@ interface CodeQuestion {
 function CodeSandboxPage() {
     const location = useLocation();
     const navigate = useNavigate();
+    const { user } = useAuth();
     
     const questions: CodeQuestion[] = location.state?.quizData ?? [];
     const language: string = location.state?.language ?? "javascript";
@@ -157,6 +159,20 @@ function CodeSandboxPage() {
 
                 {/* Right Panel - Question */}
                 <div className="sandbox-question-panel">
+                    {/* XP Status Bar */}
+                    {user && (
+                        <div className="sandbox-xp-bar">
+                            <span className="sandbox-xp-level">LVL {user.level}</span>
+                            <div className="sandbox-xp-track">
+                                <div
+                                    className="sandbox-xp-fill"
+                                    style={{ width: `${(user.exp / (user.xp_required ?? 100)) * 100}%` }}
+                                />
+                            </div>
+                            <span className="sandbox-xp-text">{user.exp}/{user.xp_required ?? 100} XP</span>
+                        </div>
+                    )}
+
                     <div className="sandbox-progress-section">
                         <p className="sandbox-progress-text">
                             Question {currentIndex + 1} of {questions.length}

@@ -32,6 +32,7 @@ function PromptPage(){
     const [selectedModel, setSelectedModel] = useState<string>("");
     const [quizType, setQuizType] = useState<QuizType | null>(null);
     const [selectedLanguage, setSelectedLanguage] = useState<string>("");
+    const [numQuestions, setNumQuestions] = useState<number>(5);
     const [prompt, setPrompt] = useState("");
     const [error, setError] = useState("");
     const navigate = useNavigate();
@@ -155,7 +156,8 @@ function PromptPage(){
                 body: JSON.stringify({ 
                     prompt: prompt,
                     quiz_type: quizType,
-                    language: selectedLanguage
+                    language: selectedLanguage,
+                    num_questions: numQuestions
                 })
             });
 
@@ -327,6 +329,30 @@ function PromptPage(){
                                 </select>
                             </div>
                         )}
+
+                        <div className="config-item">
+                            <label className="config-label">Number of Questions</label>
+                            <div className="question-count-control">
+                                <button
+                                    className="count-btn"
+                                    onClick={() => setNumQuestions(prev => Math.max(1, prev - 1))}
+                                    disabled={numQuestions <= 1}
+                                    type="button"
+                                >
+                                    −
+                                </button>
+                                <span className="count-display">{numQuestions}</span>
+                                <button
+                                    className="count-btn"
+                                    onClick={() => setNumQuestions(prev => Math.min(quizType === 'coding' ? 10 : 20, prev + 1))}
+                                    disabled={numQuestions >= (quizType === 'coding' ? 10 : 20)}
+                                    type="button"
+                                >
+                                    +
+                                </button>
+                            </div>
+                            <span className="config-hint">Max: {quizType === 'coding' ? 10 : 20}</span>
+                        </div>
                     </div>
                 </div>
 

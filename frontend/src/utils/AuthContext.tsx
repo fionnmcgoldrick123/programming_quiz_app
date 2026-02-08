@@ -8,6 +8,7 @@ interface User {
     email: string;
     exp: number;
     level: number;
+    xp_required: number;
     created_at: string | null;
     updated_at: string | null;
 }
