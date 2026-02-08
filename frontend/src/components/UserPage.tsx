@@ -52,10 +52,9 @@ function UserPage() {
         });
     };
 
-    // Calculate progress to next level (assuming 100 exp per level)
-    const expForNextLevel = 100;
-    const currentLevelExp = user.exp % expForNextLevel;
-    const progressPercent = (currentLevelExp / expForNextLevel) * 100;
+    // XP is already per-level (resets on level-up), xp_required scales per level
+    const expForNextLevel = user.xp_required ?? (100 * user.level);
+    const progressPercent = (user.exp / expForNextLevel) * 100;
 
     return (
         <>
@@ -73,7 +72,7 @@ function UserPage() {
 
                     <div className="stats-grid">
                         <div className="stat-card">
-                            <div className="stat-icon">⚡</div>
+                            <div className="stat-icon"></div>
                             <div className="stat-info">
                                 <span className="stat-value">{user.level}</span>
                                 <span className="stat-label">Level</span>
@@ -81,10 +80,10 @@ function UserPage() {
                         </div>
                         
                         <div className="stat-card">
-                            <div className="stat-icon">✨</div>
+                            <div className="stat-icon"></div>
                             <div className="stat-info">
-                                <span className="stat-value">{user.exp}</span>
-                                <span className="stat-label">Total XP</span>
+                                <span className="stat-value">{user.exp}/{expForNextLevel}</span>
+                                <span className="stat-label">XP to Next Level</span>
                             </div>
                         </div>
                     </div>
@@ -92,7 +91,7 @@ function UserPage() {
                     <div className="progress-section">
                         <div className="progress-header">
                             <span>Progress to Level {user.level + 1}</span>
-                            <span>{currentLevelExp}/{expForNextLevel} XP</span>
+                            <span>{user.exp}/{expForNextLevel} XP</span>
                         </div>
                         <div className="progress-bar">
                             <div 

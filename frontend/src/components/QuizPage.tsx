@@ -137,7 +137,7 @@ const quizStyles = {
 function QuizPage() {
     const location = useLocation();
     const quiz = location.state?.quizData ?? [];
-    const { token, updateUser } = useAuth();
+    const { token, updateUser, user } = useAuth();
 
     const navigate = useNavigate();
 
@@ -146,6 +146,7 @@ function QuizPage() {
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
     const [showXpAnimation, setShowXpAnimation] = useState(false);
     const [totalXpEarned, setTotalXpEarned] = useState(0);
+    const [levelUpInfo, setLevelUpInfo] = useState<{ show: boolean; newLevel: number | null }>({ show: false, newLevel: null });
 
     async function addXpToUser() {
         if (!token) return;
@@ -161,8 +162,16 @@ function QuizPage() {
             });
 
             if (response.ok) {
-                const updatedUser = await response.json();
+                const data = await response.json();
+                // Update user in auth context (strip extra fields)
+                const { xp_gained, leveled_up, new_level, ...updatedUser } = data;
                 updateUser(updatedUser);
+
+                if (leveled_up && new_level) {
+                    setLevelUpInfo({ show: true, newLevel: new_level });
+                    // Auto-hide after 3 seconds
+                    setTimeout(() => setLevelUpInfo({ show: false, newLevel: null }), 3000);
+                }
             }
         } catch (error) {
             console.error("Error adding XP:", error);
@@ -300,6 +309,49 @@ function QuizPage() {
             <Navbar />
             <div style={quizStyles.content}>
                 <div style={quizStyles.card}>
+                    {/* XP Status Bar */}
+                    {user && (
+                        <div style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '12px',
+                            padding: '10px 14px',
+                            marginBottom: '1.25rem',
+                            backgroundColor: '#252525',
+                            borderRadius: '10px',
+                            border: '1px solid #3d3d3d',
+                        }}>
+                            <span style={{
+                                color: '#ff9500',
+                                fontWeight: 700,
+                                fontFamily: "'Fira Code', monospace",
+                                fontSize: '0.85rem',
+                                whiteSpace: 'nowrap' as const,
+                            }}>LVL {user.level}</span>
+                            <div style={{
+                                flex: 1,
+                                backgroundColor: '#3d3d3d',
+                                borderRadius: '6px',
+                                height: '10px',
+                                overflow: 'hidden',
+                            }}>
+                                <div style={{
+                                    width: `${(user.exp / (user.xp_required ?? 100)) * 100}%`,
+                                    height: '100%',
+                                    background: 'linear-gradient(90deg, #ff9500, #ffb347)',
+                                    borderRadius: '6px',
+                                    transition: 'width 0.4s ease',
+                                }} />
+                            </div>
+                            <span style={{
+                                color: '#808080',
+                                fontFamily: "'Fira Code', monospace",
+                                fontSize: '0.8rem',
+                                whiteSpace: 'nowrap' as const,
+                            }}>{user.exp}/{user.xp_required ?? 100} XP</span>
+                        </div>
+                    )}
+
                     <p style={quizStyles.progressText}>Question {currentIndex + 1} of {quiz.length}</p>
                     <div style={quizStyles.progressBar}>
                         <div style={quizStyles.progressFill(progress)}></div>
@@ -307,6 +359,28 @@ function QuizPage() {
 
                     <h2 style={quizStyles.title}>{currentQ.title}</h2>
                     <h3 style={quizStyles.question}>{currentQ.question}</h3>
+
+                    {/* Level Up Banner */}
+                    {levelUpInfo.show && (
+                        <div style={{
+                            padding: '1rem 1.5rem',
+                            borderRadius: '12px',
+                            marginBottom: '1rem',
+                            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 149, 0, 0.2) 100%)',
+                            border: '2px solid rgba(255, 215, 0, 0.6)',
+                            textAlign: 'center' as const,
+                            animation: 'levelUpPulse 0.6s ease-out',
+                        }}>
+                            <span style={{
+                                color: '#ffd700',
+                                fontSize: '1.2rem',
+                                fontWeight: 700,
+                                fontFamily: "'Fira Code', monospace",
+                            }}>
+                                Level Up! You're now Level {levelUpInfo.newLevel}!
+                            </span>
+                        </div>
+                    )}
 
                     {feedbackMessage && (
                         <div style={{
@@ -348,6 +422,19 @@ function QuizPage() {
                             100% {
                                 opacity: 1;
                                 transform: translateY(0) scale(1);
+                            }
+                        }
+                        @keyframes levelUpPulse {
+                            0% {
+                                opacity: 0;
+                                transform: scale(0.8);
+                            }
+                            50% {
+                                transform: scale(1.05);
+                            }
+                            100% {
+                                opacity: 1;
+                                transform: scale(1);
                             }
                         }
                     `}</style>
