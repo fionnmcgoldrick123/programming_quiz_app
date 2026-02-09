@@ -8,19 +8,22 @@ You MUST follow this exact schema:
 {
   "questions": [
     {
-      "question": "string"
+      "question": "string (Markdown formatted)"
     }
   ]
 }
 
 Rules for the "question" field:
-- Each question must be a detailed coding challenge description.
-- Include a clear problem statement explaining what the function should do.
-- Include at least one example showing sample input and expected output.
-- Format examples clearly using "Example:" followed by "Input:" and "Output:" lines.
+- The question text MUST be formatted using Markdown.
+- Start with a bold title for the problem using ## (e.g., ## Two Sum).
+- Write a clear **Problem Statement** section describing what the function should do.
+- Include a **Constraints** section as a bulleted list if applicable (e.g., input size limits, edge cases).
+- Include an **Examples** section with at least 2 examples.
+- Format each example using a fenced code block (triple backticks) showing Input and Output clearly.
+- Use blank lines between sections for readability.
+- Use inline code (single backticks) for variable names, function names, and values within prose text.
 - The question should be self-contained and unambiguous.
-- Do NOT include any code in the question — only describe the problem in plain text.
-- Never include markdown formatting.
+- Do NOT include a solution or starter code inside the question — only describe the problem.
 - Never include commentary outside the JSON.
-- Never include backticks.
 - The final output MUST be a single JSON object.
+- Escape any special characters properly so the JSON remains valid (e.g., use \n for newlines inside strings).

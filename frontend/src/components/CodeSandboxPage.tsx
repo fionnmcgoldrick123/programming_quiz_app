@@ -1,6 +1,8 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Editor from "@monaco-editor/react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import Navbar from "./Navbar";
 import { useAuth } from "../utils/AuthContext";
 import '../css-files/CodeSandboxPage.css';
@@ -57,6 +59,20 @@ function CodeSandboxPage() {
 
     const currentQ = questions[currentIndex];
     const progress = ((currentIndex) / questions.length) * 100;
+
+    // Normalise the AI markdown so ReactMarkdown parses bold/italic/code properly.
+    // - Ensure blank lines around headings and fenced code blocks.
+    // - Trim each non-code line so JSX indentation doesn't create <pre> blocks.
+    const questionMarkdown = useMemo(() => {
+        let md = currentQ.question ?? "";
+        // Ensure blank line before headings
+        md = md.replace(/([^\n])\n(#{1,3} )/g, "$1\n\n$2");
+        // Ensure blank line before fenced code blocks
+        md = md.replace(/([^\n])\n```/g, "$1\n\n```");
+        // Ensure blank line after closing fenced code blocks
+        md = md.replace(/```\n([^\n])/g, "```\n\n$1");
+        return md;
+    }, [currentQ.question]);
 
     function handleNextQuestion() {
         if (currentIndex + 1 < questions.length) {
@@ -187,7 +203,11 @@ function CodeSandboxPage() {
 
                     <div className="sandbox-question-content">
                         <h2 className="sandbox-question-title">Challenge</h2>
-                        <p className="sandbox-question-text">{currentQ.question}</p>
+                        <div className="sandbox-markdown-body">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {questionMarkdown}
+                            </ReactMarkdown>
+                        </div>
 
                         {currentQ.test_cases && currentQ.test_cases.length > 0 && (
                             <div className="sandbox-test-cases">
