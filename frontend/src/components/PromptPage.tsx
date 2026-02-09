@@ -35,6 +35,7 @@ function PromptPage(){
     const [numQuestions, setNumQuestions] = useState<number>(5);
     const [prompt, setPrompt] = useState("");
     const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
 
     // Redirect to login if not authenticated
@@ -109,46 +110,8 @@ function PromptPage(){
             return;
         }
 
-        // For coding quizzes, use placeholder data for now
-        if (quizType === 'coding') {
-            const placeholderQuestions = [
-                {
-                    question: `Write a function called 'reverseString' that takes a string as input and returns the reversed string.\n\nExample:\nInput: "hello"\nOutput: "olleh"`,
-                    starter_code: getStarterCode(selectedLanguage, 'reverseString'),
-                    test_cases: [
-                        'reverseString("hello") === "olleh"',
-                        'reverseString("world") === "dlrow"',
-                        'reverseString("") === ""'
-                    ],
-                    hints: ['Think about iterating from the end', 'You can use built-in methods']
-                },
-                {
-                    question: `Write a function called 'isPalindrome' that checks if a given string is a palindrome (reads the same forwards and backwards).\n\nExample:\nInput: "racecar"\nOutput: true`,
-                    starter_code: getStarterCode(selectedLanguage, 'isPalindrome'),
-                    test_cases: [
-                        'isPalindrome("racecar") === true',
-                        'isPalindrome("hello") === false',
-                        'isPalindrome("level") === true'
-                    ],
-                    hints: ['Compare characters from both ends', 'Consider using your reverseString function']
-                },
-                {
-                    question: `Write a function called 'findMax' that takes an array of numbers and returns the largest number.\n\nExample:\nInput: [1, 5, 3, 9, 2]\nOutput: 9`,
-                    starter_code: getStarterCode(selectedLanguage, 'findMax'),
-                    test_cases: [
-                        'findMax([1, 5, 3, 9, 2]) === 9',
-                        'findMax([-1, -5, -3]) === -1',
-                        'findMax([42]) === 42'
-                    ],
-                    hints: ['Keep track of the maximum as you iterate', 'Consider edge cases like negative numbers']
-                }
-            ];
-            
-            navigate('/code-sandbox', { state: { quizData: placeholderQuestions, language: selectedLanguage } });
-            return;
-        }
-
-        // For MCQ, fetch from backend as usual
+        // Send prompt to backend for both MCQ and coding quizzes
+        setLoading(true);
         try {
             const response = await fetch('http://127.0.0.1:8000/prompt', {
                 method: 'POST',
@@ -164,75 +127,17 @@ function PromptPage(){
             const quiz = await response.json();
             console.log("Quiz from backend:", quiz);
             
-            navigate('/quiz', { state: { quizData: quiz } });
+            if (quizType === 'coding') {
+                navigate('/code-sandbox', { state: { quizData: quiz, language: selectedLanguage } });
+            } else {
+                navigate('/quiz', { state: { quizData: quiz } });
+            }
         } catch (error) {
             console.error("Error submitting prompt:", error);
             setError("Failed to generate quiz. Please try again.");
+        } finally {
+            setLoading(false);
         }
-    }
-
-    // Helper function to get language-specific starter code
-    function getStarterCode(language: string, functionName: string): string {
-        const templates: { [key: string]: { [key: string]: string } } = {
-            javascript: {
-                reverseString: `function reverseString(str) {\n    // Your code here\n    \n}`,
-                isPalindrome: `function isPalindrome(str) {\n    // Your code here\n    \n}`,
-                findMax: `function findMax(arr) {\n    // Your code here\n    \n}`
-            },
-            typescript: {
-                reverseString: `function reverseString(str: string): string {\n    // Your code here\n    \n}`,
-                isPalindrome: `function isPalindrome(str: string): boolean {\n    // Your code here\n    \n}`,
-                findMax: `function findMax(arr: number[]): number {\n    // Your code here\n    \n}`
-            },
-            python: {
-                reverseString: `def reverse_string(s: str) -> str:\n    # Your code here\n    pass`,
-                isPalindrome: `def is_palindrome(s: str) -> bool:\n    # Your code here\n    pass`,
-                findMax: `def find_max(arr: list) -> int:\n    # Your code here\n    pass`
-            },
-            java: {
-                reverseString: `public static String reverseString(String str) {\n    // Your code here\n    return "";\n}`,
-                isPalindrome: `public static boolean isPalindrome(String str) {\n    // Your code here\n    return false;\n}`,
-                findMax: `public static int findMax(int[] arr) {\n    // Your code here\n    return 0;\n}`
-            },
-            'c++': {
-                reverseString: `string reverseString(string str) {\n    // Your code here\n    return "";\n}`,
-                isPalindrome: `bool isPalindrome(string str) {\n    // Your code here\n    return false;\n}`,
-                findMax: `int findMax(vector<int> arr) {\n    // Your code here\n    return 0;\n}`
-            },
-            'c#': {
-                reverseString: `public static string ReverseString(string str) {\n    // Your code here\n    return "";\n}`,
-                isPalindrome: `public static bool IsPalindrome(string str) {\n    // Your code here\n    return false;\n}`,
-                findMax: `public static int FindMax(int[] arr) {\n    // Your code here\n    return 0;\n}`
-            },
-            go: {
-                reverseString: `func reverseString(str string) string {\n    // Your code here\n    return ""\n}`,
-                isPalindrome: `func isPalindrome(str string) bool {\n    // Your code here\n    return false\n}`,
-                findMax: `func findMax(arr []int) int {\n    // Your code here\n    return 0\n}`
-            },
-            rust: {
-                reverseString: `fn reverse_string(s: &str) -> String {\n    // Your code here\n    String::new()\n}`,
-                isPalindrome: `fn is_palindrome(s: &str) -> bool {\n    // Your code here\n    false\n}`,
-                findMax: `fn find_max(arr: &[i32]) -> i32 {\n    // Your code here\n    0\n}`
-            },
-            ruby: {
-                reverseString: `def reverse_string(str)\n  # Your code here\n  \nend`,
-                isPalindrome: `def is_palindrome(str)\n  # Your code here\n  \nend`,
-                findMax: `def find_max(arr)\n  # Your code here\n  \nend`
-            },
-            php: {
-                reverseString: `function reverseString($str) {\n    // Your code here\n    return "";\n}`,
-                isPalindrome: `function isPalindrome($str) {\n    // Your code here\n    return false;\n}`,
-                findMax: `function findMax($arr) {\n    // Your code here\n    return 0;\n}`
-            }
-        };
-
-        const langTemplates = templates[language.toLowerCase()];
-        if (langTemplates && langTemplates[functionName]) {
-            return langTemplates[functionName];
-        }
-        
-        // Default fallback
-        return `// Write your ${functionName} function here\n\n`;
     }
 
     return(
@@ -390,10 +295,10 @@ function PromptPage(){
                 <button 
                     className="generate-button"
                     onClick={handleSubmit}
-                    disabled={!quizType || !selectedModel || !prompt.trim() || (quizType === 'coding' && !selectedLanguage)}
+                    disabled={loading || !quizType || !selectedModel || !prompt.trim() || (quizType === 'coding' && !selectedLanguage)}
                 >
-                    <span className="button-text">Generate Quiz</span>
-                    <span className="button-arrow">→</span>
+                    <span className="button-text">{loading ? 'Generating...' : 'Generate Quiz'}</span>
+                    {!loading && <span className="button-arrow">→</span>}
                 </button>
             </div>
         </div>

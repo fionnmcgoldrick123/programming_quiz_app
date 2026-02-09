@@ -1,4 +1,4 @@
-from pydantic_models import QuizSchema
+from pydantic_models import QuizSchema, CodingQuestionSchema
 import json
 
 def openai_parser(response : dict) -> QuizSchema:
@@ -39,6 +39,37 @@ def openai_parser(response : dict) -> QuizSchema:
         )
     return questions
 
-    
-    
-    
+
+def openai_coding_parser(response: dict) -> list[CodingQuestionSchema]:
+    """
+    Parses the response from the OpenAI model into CodingQuestionSchema objects.
+    Extracts coding challenge questions from the AI response.
+
+    Args:
+        response (dict): The response dictionary from the OpenAI model.
+
+    Returns:
+        list[CodingQuestionSchema]: A list of coding question objects.
+    """
+    content = response["choices"][0]["message"]["content"]
+
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as e:
+        print("JSON parsing failed: ", e)
+        return {"Error": "Failed to parse JSON"}
+
+    print("Parsed Coding Quiz Data:", data)
+
+    questions = []
+
+    for q in data.get("questions", []):
+        questions.append(
+            CodingQuestionSchema(
+                question=q["question"],
+                starter_code=q.get("starter_code", ""),
+                test_cases=q.get("test_cases", []),
+                hints=q.get("hints", []),
+            )
+        )
+    return questions

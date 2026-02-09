@@ -9,9 +9,9 @@ import bcrypt
 import jwt
 from datetime import datetime, timedelta
 import json
-from pydantic_models import PromptRequest, RegisterRequest, ModelRequest, LoginRequest, UserResponse, AddXpRequest
-from parsers.parser_openai import openai_parser
-from parsers.parser_ollama import ollama_parser
+from pydantic_models import PromptRequest, RegisterRequest, ModelRequest, LoginRequest, UserResponse, AddXpRequest, CodingQuestionSchema
+from parsers.parser_openai import openai_parser, openai_coding_parser
+from parsers.parser_ollama import ollama_parser, ollama_coding_parser
 
 load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
@@ -28,6 +28,7 @@ origins = [
 ]
 
 prompt_guide_file = "./prompt_guide.txt"
+coding_prompt_guide_file = "./coding_prompt_guide.txt"
 
 current_model = "openai"
 
@@ -35,6 +36,10 @@ current_model = "openai"
 with open(prompt_guide_file, "r", encoding="utf-8") as file:
     # This variable stores a string. A set of rules that is sent with the users prompt to the AI model. 
     QUIZ_FORMAT_GUIDE = file.read()
+
+# Reads through 'coding_prompt_guide.txt' for coding quiz generation
+with open(coding_prompt_guide_file, "r", encoding="utf-8") as file:
+    CODING_FORMAT_GUIDE = file.read()
 
 
 app.add_middleware(
@@ -82,9 +87,14 @@ async def openai_request(prompt: PromptRequest):
     Returns:
         Parsed quiz data from the OpenAI model.
     """
-    prompt_request =  QUIZ_FORMAT_GUIDE + " \n"
+    is_coding = prompt.quiz_type == "coding"
+    guide = CODING_FORMAT_GUIDE if is_coding else QUIZ_FORMAT_GUIDE
+    
+    prompt_request = guide + " \n"
     if prompt.num_questions:
         prompt_request += f"Generate exactly {prompt.num_questions} questions. \n"
+    if is_coding and prompt.language:
+        prompt_request += f"The programming language is {prompt.language}. \n"
     prompt_request += prompt.prompt
     
     url = "https://api.openai.com/v1/chat/completions"
@@ -94,10 +104,12 @@ async def openai_request(prompt: PromptRequest):
         "Content-Type": "application/json"
     }
     
+    system_content = "you are a coding challenge generation assistant" if is_coding else "you are a quiz generation assistant"
+    
     payload  = {
         "model": "gpt-4o-mini",
         "messages": [
-            {"role": "system", "content": "you are a quiz generation assistant"},
+            {"role": "system", "content": system_content},
             {"role": "user", "content": prompt_request}
         ]
     }
@@ -109,8 +121,11 @@ async def openai_request(prompt: PromptRequest):
         
     print(response.json())
     
-    # Use the OpenAI parser to parse the response
-    parsed_quiz = openai_parser(response.json())
+    # Use the appropriate parser based on quiz type
+    if is_coding:
+        parsed_quiz = openai_coding_parser(response.json())
+    else:
+        parsed_quiz = openai_parser(response.json())
     print(f"\n\n\n{parsed_quiz}")
     return parsed_quiz
     
@@ -127,9 +142,14 @@ async def llama3_req(prompt: PromptRequest):
     Returns:
         Parsed quiz data from the local ollama model.
     """
-    prompt_request =  QUIZ_FORMAT_GUIDE + " \n"
+    is_coding = prompt.quiz_type == "coding"
+    guide = CODING_FORMAT_GUIDE if is_coding else QUIZ_FORMAT_GUIDE
+    
+    prompt_request = guide + " \n"
     if prompt.num_questions:
         prompt_request += f"Generate exactly {prompt.num_questions} questions. \n"
+    if is_coding and prompt.language:
+        prompt_request += f"The programming language is {prompt.language}. \n"
     prompt_request += prompt.prompt
     
     url = "http://localhost:11434/api/generate"
@@ -150,7 +170,10 @@ async def llama3_req(prompt: PromptRequest):
         response = await client.post(url, headers=headers, json=payload)
         
     print(response.json())
-    parsed_quiz = ollama_parser(response.json())
+    if is_coding:
+        parsed_quiz = ollama_coding_parser(response.json())
+    else:
+        parsed_quiz = ollama_parser(response.json())
     print(f"\n\n\n{parsed_quiz}")
     return parsed_quiz
 

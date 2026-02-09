@@ -11,6 +11,14 @@ class QuizSchema(BaseModel):
 class PromptRequest(BaseModel):
     prompt: str
     num_questions: Optional[int] = None
+    quiz_type: Optional[str] = None
+    language: Optional[str] = None
+
+class CodingQuestionSchema(BaseModel):
+    question: str
+    starter_code: str = ""
+    test_cases: List[str] = []
+    hints: List[str] = []
 
 class ModelRequest(BaseModel):
     model: str
