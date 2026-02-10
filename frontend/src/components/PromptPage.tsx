@@ -1,6 +1,6 @@
 import '../css-files/PromptPage.css'  
 import Navbar from "./Navbar";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../utils/AuthContext";
 import mcqIcon from "../assets/imgs/test.png";
@@ -36,7 +36,35 @@ function PromptPage(){
     const [prompt, setPrompt] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
+    const [loadingTip, setLoadingTip] = useState(0);
     const navigate = useNavigate();
+
+    const mcqTips = [
+        "Crafting challenging questions...",
+        "Generating answer options...",
+        "Validating correct answers...",
+        "Polishing quiz content...",
+        "Almost there...",
+    ];
+
+    const codingTips = [
+        "Designing coding challenges...",
+        "Generating starter code stubs...",
+        "Building test cases...",
+        "Crafting helpful hints...",
+        "Finalising challenges...",
+    ];
+
+    const tips = quizType === 'coding' ? codingTips : mcqTips;
+
+    useEffect(() => {
+        if (!loading) return;
+        setLoadingTip(0);
+        const interval = setInterval(() => {
+            setLoadingTip(prev => (prev + 1) % tips.length);
+        }, 3500);
+        return () => clearInterval(interval);
+    }, [loading, tips.length]);
 
     // Redirect to login if not authenticated
     if (!isAuthenticated) {
@@ -143,6 +171,42 @@ function PromptPage(){
     return(
         <>
         <Navbar />
+        {loading && (
+            <div className="loading-overlay">
+                <div className="loading-card">
+                    {/* Animated icon */}
+                    <div className="loading-icon-wrapper">
+                        {quizType === 'coding' ? (
+                            <div className="loading-code-icon">
+                                <span className="code-bracket">&lt;</span>
+                                <span className="code-slash">/</span>
+                                <span className="code-bracket">&gt;</span>
+                            </div>
+                        ) : (
+                            <div className="loading-mcq-icon">
+                                <span className="mcq-letter">A</span>
+                                <span className="mcq-letter">B</span>
+                                <span className="mcq-letter">C</span>
+                                <span className="mcq-letter">D</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <h2 className="loading-title">
+                        {quizType === 'coding' ? 'Building Your Coding Challenges' : 'Generating Your Quiz'}
+                    </h2>
+
+                    {/* Progress bar */}
+                    <div className="loading-progress-track">
+                        <div className="loading-progress-bar" />
+                    </div>
+
+                    <p className="loading-tip" key={loadingTip}>{tips[loadingTip]}</p>
+
+                    <p className="loading-subtext">This may take up to a minute depending on the model</p>
+                </div>
+            </div>
+        )}
         <div className="prompt-page">
             {/* Header Section */}
             <div className="prompt-header">

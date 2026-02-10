@@ -21,9 +21,20 @@ function CodeSandboxPage() {
     
     const questions: CodeQuestion[] = location.state?.quizData ?? [];
     const language: string = location.state?.language ?? "javascript";
+
+    function getDefaultStub(lang: string): string {
+        const lower = lang.toLowerCase();
+        if (lower === "python") return "# Write your solution here\n\n";
+        if (lower === "java") return "// Write your solution here\n\npublic class Solution {\n    \n}\n";
+        if (lower === "c++" || lower === "cpp") return "// Write your solution here\n#include <iostream>\nusing namespace std;\n\n";
+        if (lower === "c#" || lower === "csharp") return "// Write your solution here\nusing System;\n\n";
+        if (lower === "go") return "package main\n\n// Write your solution here\n\n";
+        if (lower === "rust") return "// Write your solution here\n\nfn main() {\n    \n}\n";
+        return "// Write your solution here\n\n";
+    }
     
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [code, setCode] = useState(questions[0]?.starter_code ?? "// Start coding here...");
+    const [code, setCode] = useState(questions[0]?.starter_code || getDefaultStub(language));
     const [output, setOutput] = useState<string>("");
     const [finished, setFinished] = useState(false);
 
@@ -77,7 +88,7 @@ function CodeSandboxPage() {
     function handleNextQuestion() {
         if (currentIndex + 1 < questions.length) {
             setCurrentIndex(currentIndex + 1);
-            setCode(questions[currentIndex + 1]?.starter_code ?? "");
+            setCode(questions[currentIndex + 1]?.starter_code || getDefaultStub(language));
             setOutput("");
         } else {
             setFinished(true);

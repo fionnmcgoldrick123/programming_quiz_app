@@ -8,7 +8,10 @@ You MUST follow this exact schema:
 {
   "questions": [
     {
-      "question": "string (Markdown formatted)"
+      "question": "string (Markdown formatted)",
+      "starter_code": "string (code stub)",
+      "test_cases": ["string", "string"],
+      "hints": ["string"]
     }
   ]
 }
@@ -24,6 +27,25 @@ Rules for the "question" field:
 - Use inline code (single backticks) for variable names, function names, and values within prose text.
 - The question should be self-contained and unambiguous.
 - Do NOT include a solution or starter code inside the question — only describe the problem.
+
+Rules for the "starter_code" field:
+- Provide a code stub / skeleton in the programming language requested by the user.
+- The stub MUST include the function signature with correct parameter names and types (where applicable).
+- Include a docstring or comment briefly restating what the function should do.
+- The function body should contain a placeholder like `pass`, `return None`, `// TODO`, or equivalent for the language.
+- Do NOT include a working solution — only the skeleton.
+- Use proper indentation and formatting for the language.
+- If the challenge involves a class, include the class definition with method stubs.
+
+Rules for the "test_cases" field:
+- Provide 2-4 test cases as human-readable strings (e.g., "twoSum([2,7,11,15], 9) should return [0,1]").
+- Cover basic cases, edge cases, and at least one larger input if relevant.
+
+Rules for the "hints" field:
+- Provide 1-3 short hints that guide the user without giving away the solution.
+- Progress from vague to more specific.
+
+General rules:
 - Never include commentary outside the JSON.
 - The final output MUST be a single JSON object.
 - Escape any special characters properly so the JSON remains valid (e.g., use \n for newlines inside strings).
