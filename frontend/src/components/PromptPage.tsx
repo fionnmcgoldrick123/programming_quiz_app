@@ -28,7 +28,7 @@ const models = [
 ];
 
 function PromptPage(){
-    const { isAuthenticated } = useAuth();
+    const { isAuthenticated, user } = useAuth();
     const [selectedModel, setSelectedModel] = useState<string>("");
     const [quizType, setQuizType] = useState<QuizType | null>(null);
     const [selectedLanguage, setSelectedLanguage] = useState<string>("");
@@ -156,9 +156,9 @@ function PromptPage(){
             console.log("Quiz from backend:", quiz);
             
             if (quizType === 'coding') {
-                navigate('/code-sandbox', { state: { quizData: quiz, language: selectedLanguage } });
+                navigate('/code-sandbox', { state: { quizData: quiz, language: selectedLanguage, sessionId: Date.now() } });
             } else {
-                navigate('/quiz', { state: { quizData: quiz } });
+                navigate('/quiz', { state: { quizData: quiz, sessionId: Date.now() } });
             }
         } catch (error) {
             console.error("Error submitting prompt:", error);
@@ -208,6 +208,65 @@ function PromptPage(){
             </div>
         )}
         <div className="prompt-page">
+            {/* Resume Active Quiz Banner */}
+            {(() => {
+                const userId = user?.id;
+                if (!userId) return null;
+                try {
+                    const mcqRaw = sessionStorage.getItem(`quizPageSession_${userId}`);
+                    if (mcqRaw) {
+                        const mcq = JSON.parse(mcqRaw);
+                        if (mcq?.quiz?.length && !mcq.finished) {
+                            return (
+                                <div className="resume-banner">
+                                    <div className="resume-banner-content">
+                                        <div className="resume-banner-text">
+                                            <span className="resume-banner-icon">&#9654;</span>
+                                            <div>
+                                                <strong>Quiz in progress</strong>
+                                                <span className="resume-banner-detail">
+                                                    Question {(mcq.currentIndex ?? 0) + 1} of {mcq.quiz.length}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="resume-banner-actions">
+                                            <button className="resume-banner-btn" onClick={() => navigate('/quiz')}>Resume Quiz</button>
+                                            <button className="resume-banner-dismiss" onClick={() => { sessionStorage.removeItem(`quizPageSession_${userId}`); navigate(0); }}>Discard</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                    }
+                    const codeRaw = sessionStorage.getItem(`codeSandboxSession_${userId}`);
+                    if (codeRaw) {
+                        const code = JSON.parse(codeRaw);
+                        if (code?.questions?.length && !code.finished) {
+                            return (
+                                <div className="resume-banner">
+                                    <div className="resume-banner-content">
+                                        <div className="resume-banner-text">
+                                            <span className="resume-banner-icon">&#9654;</span>
+                                            <div>
+                                                <strong>Coding challenge in progress</strong>
+                                                <span className="resume-banner-detail">
+                                                    Challenge {(code.currentIndex ?? 0) + 1} of {code.questions.length} &middot; {(code.language ?? 'code').toUpperCase()}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="resume-banner-actions">
+                                            <button className="resume-banner-btn" onClick={() => navigate('/code-sandbox')}>Resume Challenge</button>
+                                            <button className="resume-banner-dismiss" onClick={() => { sessionStorage.removeItem(`codeSandboxSession_${userId}`); navigate(0); }}>Discard</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            );
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+                return null;
+            })()}
+
             {/* Header Section */}
             <div className="prompt-header">
                 <h1 className="prompt-page-title">Create Your Quiz</h1>

@@ -64,9 +64,9 @@ function PromptForm({ selectedModel, quizType, selectedLanguage }: PromptFormPro
         console.log("Quiz from backend:", quiz);
         
         if (quizType === 'coding') {
-            navigate('/code-sandbox', { state: { quizData: quiz, language: selectedLanguage } });
+            navigate('/code-sandbox', { state: { quizData: quiz, language: selectedLanguage, sessionId: Date.now() } });
         } else {
-            navigate('/quiz', { state: { quizData: quiz } });
+            navigate('/quiz', { state: { quizData: quiz, sessionId: Date.now() } });
         }
 
          // setLoading(false);

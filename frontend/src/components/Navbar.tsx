@@ -12,6 +12,31 @@ function Navbar(){
         navigate(path);
     }
 
+    function handleQuizClick() {
+        // Check for active (unfinished) quiz sessions for the current user
+        const userId = user?.id;
+        if (!userId) { navigate('/prompt'); return; }
+        try {
+            const mcqRaw = sessionStorage.getItem(`quizPageSession_${userId}`);
+            if (mcqRaw) {
+                const mcq = JSON.parse(mcqRaw);
+                if (mcq?.quiz?.length && !mcq.finished) {
+                    navigate('/quiz');
+                    return;
+                }
+            }
+            const codeRaw = sessionStorage.getItem(`codeSandboxSession_${userId}`);
+            if (codeRaw) {
+                const code = JSON.parse(codeRaw);
+                if (code?.questions?.length && !code.finished) {
+                    navigate('/code-sandbox');
+                    return;
+                }
+            }
+        } catch (e) { /* ignore parse errors, fall through */ }
+        navigate('/prompt');
+    }
+
     function handleLogout(){
         logout();
         navigate("/");
@@ -22,7 +47,7 @@ function Navbar(){
             <div className = "nav-container">
                 <div className="nav-left">
                     <button className="nav-button" onClick={()=> handleClick("/")}>Home</button>
-                    <button className="nav-button" onClick={()=> handleClick("/prompt")}>Quiz</button>
+                    <button className="nav-button" onClick={handleQuizClick}>Quiz</button>
                 </div>
                 <div className="nav-right">
                     {isAuthenticated && user ? (

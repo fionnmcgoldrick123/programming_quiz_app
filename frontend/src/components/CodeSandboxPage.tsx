@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -14,13 +14,14 @@ interface CodeQuestion {
     hints?: string[];
 }
 
+const codeSessionKey = (userId: number) => `codeSandboxSession_${userId}`;
+
 function CodeSandboxPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
-    
-    const questions: CodeQuestion[] = location.state?.quizData ?? [];
-    const language: string = location.state?.language ?? "javascript";
+
+    const CODE_SESSION_KEY = user ? codeSessionKey(user.id) : null;
 
     function getDefaultStub(lang: string): string {
         const lower = lang.toLowerCase();
@@ -32,13 +33,74 @@ function CodeSandboxPage() {
         if (lower === "rust") return "// Write your solution here\n\nfn main() {\n    \n}\n";
         return "// Write your solution here\n\n";
     }
-    
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [code, setCode] = useState(questions[0]?.starter_code || getDefaultStub(language));
+
+    // Parse saved session once for use in state initializers
+    const savedSession = (() => {
+        try {
+            if (!CODE_SESSION_KEY) return null;
+            const raw = sessionStorage.getItem(CODE_SESSION_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+    })();
+
+    const isFreshQuiz = Boolean(
+        location.state?.quizData?.length &&
+        (!savedSession || savedSession.sessionId !== location.state.sessionId)
+    );
+
+    const [questions] = useState<CodeQuestion[]>(() => {
+        if (isFreshQuiz) return location.state.quizData;
+        return savedSession?.questions ?? location.state?.quizData ?? [];
+    });
+
+    const [language] = useState<string>(() => {
+        if (isFreshQuiz) return location.state?.language ?? "javascript";
+        return savedSession?.language ?? location.state?.language ?? "javascript";
+    });
+
+    const [sessionId] = useState<number>(() => {
+        if (isFreshQuiz) return location.state.sessionId ?? Date.now();
+        return savedSession?.sessionId ?? location.state?.sessionId ?? Date.now();
+    });
+
+    const [currentIndex, setCurrentIndex] = useState<number>(() => {
+        if (isFreshQuiz) return 0;
+        return savedSession?.currentIndex ?? 0;
+    });
+
+    const [code, setCode] = useState<string>(() => {
+        if (isFreshQuiz) {
+            return location.state.quizData[0]?.starter_code || getDefaultStub(location.state?.language ?? "javascript");
+        }
+        if (savedSession?.code != null) return savedSession.code;
+        const qs = savedSession?.questions ?? [];
+        const idx = savedSession?.currentIndex ?? 0;
+        const lang = savedSession?.language ?? "javascript";
+        return qs[idx]?.starter_code || getDefaultStub(lang);
+    });
+
     const [output, setOutput] = useState<string>("");
     const [isRunning, setIsRunning] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [finished, setFinished] = useState(false);
+
+    const [finished, setFinished] = useState<boolean>(() => {
+        if (isFreshQuiz) return false;
+        return savedSession?.finished ?? false;
+    });
+
+    // Persist session to sessionStorage whenever progress changes
+    useEffect(() => {
+        if (questions.length && CODE_SESSION_KEY) {
+            sessionStorage.setItem(CODE_SESSION_KEY, JSON.stringify({
+                sessionId,
+                questions,
+                language,
+                currentIndex,
+                code,
+                finished,
+            }));
+        }
+    }, [sessionId, questions, language, currentIndex, code, finished, CODE_SESSION_KEY]);
 
     const languageMap: { [key: string]: string } = {
         "python": "python",
@@ -60,7 +122,7 @@ function CodeSandboxPage() {
                         <p className="sandbox-empty-text">No coding challenge data found. Go back and generate a quiz first.</p>
                         <button 
                             className="sandbox-back-button"
-                            onClick={() => navigate('/prompt')}
+                            onClick={() => { if (CODE_SESSION_KEY) sessionStorage.removeItem(CODE_SESSION_KEY); navigate('/prompt'); }}
                         >
                             Back to Prompt
                         </button>
@@ -195,7 +257,7 @@ function CodeSandboxPage() {
                         </p>
                         <button 
                             className="sandbox-back-button"
-                            onClick={() => navigate('/prompt')}
+                            onClick={() => { if (CODE_SESSION_KEY) sessionStorage.removeItem(CODE_SESSION_KEY); navigate('/prompt'); }}
                         >
                             Start New Challenge
                         </button>

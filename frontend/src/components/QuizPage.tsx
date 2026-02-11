@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Navbar from "./Navbar";
 import { useAuth } from "../utils/AuthContext";
 
@@ -134,19 +134,72 @@ const quizStyles = {
     },
 };
 
+const quizSessionKey = (userId: number) => `quizPageSession_${userId}`;
+
 function QuizPage() {
     const location = useLocation();
-    const quiz = location.state?.quizData ?? [];
+    const navigate = useNavigate();
     const { token, updateUser, user } = useAuth();
 
-    const navigate = useNavigate();
+    const QUIZ_SESSION_KEY = user ? quizSessionKey(user.id) : null;
 
-    const [currentIndex, setCurrentIndex] = useState(0);
-    const [finished, setFinished] = useState(false);
+    // Parse saved session once for use in state initializers
+    const savedSession = (() => {
+        try {
+            if (!QUIZ_SESSION_KEY) return null;
+            const raw = sessionStorage.getItem(QUIZ_SESSION_KEY);
+            return raw ? JSON.parse(raw) : null;
+        } catch (e) { return null; }
+    })();
+
+    // Fresh quiz = location.state has quiz data with a session ID different from saved
+    const isFreshQuiz = Boolean(
+        location.state?.quizData?.length &&
+        (!savedSession || savedSession.sessionId !== location.state.sessionId)
+    );
+
+    const [quiz] = useState<any[]>(() => {
+        if (isFreshQuiz) return location.state.quizData;
+        return savedSession?.quiz ?? location.state?.quizData ?? [];
+    });
+
+    const [sessionId] = useState<number>(() => {
+        if (isFreshQuiz) return location.state.sessionId ?? Date.now();
+        return savedSession?.sessionId ?? location.state?.sessionId ?? Date.now();
+    });
+
+    const [currentIndex, setCurrentIndex] = useState<number>(() => {
+        if (isFreshQuiz) return 0;
+        return savedSession?.currentIndex ?? 0;
+    });
+
+    const [finished, setFinished] = useState<boolean>(() => {
+        if (isFreshQuiz) return false;
+        return savedSession?.finished ?? false;
+    });
+
     const [feedbackMessage, setFeedbackMessage] = useState<string | null>(null);
     const [showXpAnimation, setShowXpAnimation] = useState(false);
-    const [totalXpEarned, setTotalXpEarned] = useState(0);
+
+    const [totalXpEarned, setTotalXpEarned] = useState<number>(() => {
+        if (isFreshQuiz) return 0;
+        return savedSession?.totalXpEarned ?? 0;
+    });
+
     const [levelUpInfo, setLevelUpInfo] = useState<{ show: boolean; newLevel: number | null }>({ show: false, newLevel: null });
+
+    // Persist quiz session to sessionStorage whenever progress changes
+    useEffect(() => {
+        if (quiz.length && QUIZ_SESSION_KEY) {
+            sessionStorage.setItem(QUIZ_SESSION_KEY, JSON.stringify({
+                sessionId,
+                quiz,
+                currentIndex,
+                finished,
+                totalXpEarned,
+            }));
+        }
+    }, [sessionId, quiz, currentIndex, finished, totalXpEarned, QUIZ_SESSION_KEY]);
 
     async function addXpToUser() {
         if (!token) return;
@@ -187,7 +240,7 @@ function QuizPage() {
                         <p style={quizStyles.emptyText}>No quiz data found. Go back and generate a quiz first.</p>
                         <button 
                             style={quizStyles.backButton} 
-                            onClick={() => navigate('/prompt')}
+                            onClick={() => { if (QUIZ_SESSION_KEY) sessionStorage.removeItem(QUIZ_SESSION_KEY); navigate('/prompt'); }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = 'translateY(-2px)';
                                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 149, 0, 0.4)';
@@ -282,7 +335,7 @@ function QuizPage() {
                         </div>
                         <button 
                             style={quizStyles.backButton} 
-                            onClick={() => navigate('/prompt')}
+                            onClick={() => { if (QUIZ_SESSION_KEY) sessionStorage.removeItem(QUIZ_SESSION_KEY); navigate('/prompt'); }}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = 'translateY(-2px)';
                                 e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 149, 0, 0.4)';
