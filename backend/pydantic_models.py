@@ -45,3 +45,12 @@ class UserResponse(BaseModel):
 
 class AddXpRequest(BaseModel):
     xp_amount: int
+
+class RunCodeRequest(BaseModel):
+    code: str
+    language: str
+
+class SubmitCodeRequest(BaseModel):
+    code: str
+    language: str
+    test_cases: List[str]

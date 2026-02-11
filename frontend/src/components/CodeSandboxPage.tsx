@@ -36,6 +36,8 @@ function CodeSandboxPage() {
     const [currentIndex, setCurrentIndex] = useState(0);
     const [code, setCode] = useState(questions[0]?.starter_code || getDefaultStub(language));
     const [output, setOutput] = useState<string>("");
+    const [isRunning, setIsRunning] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [finished, setFinished] = useState(false);
 
     const languageMap: { [key: string]: string } = {
@@ -95,17 +97,89 @@ function CodeSandboxPage() {
         }
     }
 
-    function handleRunCode() {
-        // Placeholder for code execution
-        setOutput("[Running] Code execution coming soon...\n\nYour code:\n" + code);
+    async function handleRunCode() {
+        setIsRunning(true);
+        setOutput("Running code...");
+        
+        try {
+            const response = await fetch("http://127.0.0.1:8000/run-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    code: code,
+                    language: language
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                setOutput(`✓ Execution successful\n\nOutput:\n${result.output || '(no output)'}`);
+            } else {
+                setOutput(`✗ Execution failed\n\nError:\n${result.error || 'Unknown error'}`);
+            }
+        } catch (error) {
+            setOutput(`✗ Failed to execute code\n\nError: ${error}`);
+        } finally {
+            setIsRunning(false);
+        }
     }
 
-    function handleSubmit() {
-        // Placeholder for submission logic
-        setOutput("[Success] Submitted! Moving to next question...");
-        setTimeout(() => {
-            handleNextQuestion();
-        }, 1500);
+    async function handleSubmit() {
+        setIsSubmitting(true);
+        setOutput("Running tests...");
+        
+        try {
+            const response = await fetch("http://127.0.0.1:8000/submit-code", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    code: code,
+                    language: language,
+                    test_cases: currentQ.test_cases
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                let outputText = "✓ All tests passed!\n\n";
+                result.test_results.forEach((test: any) => {
+                    outputText += `Test ${test.test_number}: ✓ PASSED\n`;
+                    outputText += `  Input: ${JSON.stringify(test.input)}\n`;
+                    outputText += `  Expected: ${JSON.stringify(test.expected)}\n`;
+                    outputText += `  Got: ${JSON.stringify(test.actual)}\n\n`;
+                });
+                setOutput(outputText);
+                
+                // Move to next question after a short delay
+                setTimeout(() => {
+                    handleNextQuestion();
+                }, 2000);
+            } else {
+                let outputText = "✗ Some tests failed\n\n";
+                result.test_results.forEach((test: any) => {
+                    const status = test.passed ? "✓ PASSED" : "✗ FAILED";
+                    outputText += `Test ${test.test_number}: ${status}\n`;
+                    outputText += `  Input: ${JSON.stringify(test.input)}\n`;
+                    outputText += `  Expected: ${JSON.stringify(test.expected)}\n`;
+                    outputText += `  Got: ${JSON.stringify(test.actual)}\n`;
+                    if (test.error) {
+                        outputText += `  Error: ${test.error}\n`;
+                    }
+                    outputText += `\n`;
+                });
+                setOutput(outputText);
+            }
+        } catch (error) {
+            setOutput(`✗ Failed to submit code\n\nError: ${error}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     }
 
     if (finished) {
@@ -172,14 +246,16 @@ function CodeSandboxPage() {
                         <button 
                             className="sandbox-run-button"
                             onClick={handleRunCode}
+                            disabled={isRunning || isSubmitting}
                         >
-                            Run Code
+                            {isRunning ? "Running..." : "Run Code"}
                         </button>
                         <button 
                             className="sandbox-submit-button"
                             onClick={handleSubmit}
+                            disabled={isRunning || isSubmitting}
                         >
-                            Submit Solution
+                            {isSubmitting ? "Submitting..." : "Submit Solution"}
                         </button>
                     </div>
                 </div>

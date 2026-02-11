@@ -191,7 +191,8 @@
     background-color: #252526;
     border-top: 1px solid #3d3d3d;
     padding: 1rem;
-    max-height: 150px;
+    max-height: 200px;
+    overflow-y: auto;
 }
 
 .sandbox-output-title {
@@ -207,7 +208,7 @@
     border: 1px solid #3d3d3d;
     border-radius: 8px;
     padding: 0.75rem;
-    max-height: 80px;
+    max-height: 150px;
     overflow-y: auto;
 }
 
@@ -246,6 +247,18 @@
     border-color: #ff9500;
     background-color: #4d4d4d;
     box-shadow: 0 4px 12px rgba(255, 149, 0, 0.2);
+}
+
+.sandbox-run-button:disabled,
+.sandbox-submit-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.sandbox-run-button:disabled:hover,
+.sandbox-submit-button:disabled:hover {
+    transform: none;
+    box-shadow: none;
 }
 
 .sandbox-submit-button {

@@ -36,10 +36,18 @@ Rules for the "starter_code" field:
 - Do NOT include a working solution — only the skeleton.
 - Use proper indentation and formatting for the language.
 - If the challenge involves a class, include the class definition with method stubs.
+- IMPORTANT: The starter code must be immediately executable (it should not cause syntax errors when run).
 
 Rules for the "test_cases" field:
-- Provide 2-4 test cases as human-readable strings (e.g., "twoSum([2,7,11,15], 9) should return [0,1]").
-- Cover basic cases, edge cases, and at least one larger input if relevant.
+- CRITICAL: Each test case MUST be valid, executable code in JSON format with this exact structure:
+  {"input": <actual_values>, "expected": <expected_output>}
+- For Python: {"input": {"nums": [2, 7, 11, 15], "target": 9}, "expected": [0, 1]}
+- For JavaScript: {"input": {"nums": [2, 7, 11, 15], "target": 9}, "expected": [0, 1]}
+- The "input" field must be an object/dict where keys are the parameter names from the function signature.
+- The "expected" field contains the exact expected return value.
+- Provide 3-5 test cases covering: basic cases, edge cases, and boundary conditions.
+- Each test case must be a single valid JSON object on one line.
+- DO NOT use human-readable descriptions like "should return" - only use the JSON format above.
 
 Rules for the "hints" field:
 - Provide 1-3 short hints that guide the user without giving away the solution.
@@ -49,3 +57,24 @@ General rules:
 - Never include commentary outside the JSON.
 - The final output MUST be a single JSON object.
 - Escape any special characters properly so the JSON remains valid (e.g., use \n for newlines inside strings).
+COMPLETE EXAMPLE (Python Two Sum problem):
+
+{
+  "questions": [
+    {
+      "question": "## Two Sum\n\n**Problem Statement**\n\nGiven an array of integers `nums` and an integer `target`, return the indices of the two numbers that add up to `target`.\n\nYou may assume that each input has exactly one solution, and you may not use the same element twice.\n\n**Constraints**\n\n- 2 <= nums.length <= 10^4\n- -10^9 <= nums[i] <= 10^9\n- -10^9 <= target <= 10^9\n- Only one valid answer exists\n\n**Examples**\n\n```python\nInput: nums = [2, 7, 11, 15], target = 9\nOutput: [0, 1]\nExplanation: nums[0] + nums[1] == 9, so we return [0, 1]\n```\n\n```python\nInput: nums = [3, 2, 4], target = 6\nOutput: [1, 2]\n```",
+      "starter_code": "def twoSum(nums, target):\n    \"\"\"\n    Find two numbers that add up to target and return their indices.\n    \n    Args:\n        nums: List of integers\n        target: Target sum\n    \n    Returns:\n        List containing two indices\n    \"\"\"\n    pass",
+      "test_cases": [
+        "{\"input\": {\"nums\": [2, 7, 11, 15], \"target\": 9}, \"expected\": [0, 1]}",
+        "{\"input\": {\"nums\": [3, 2, 4], \"target\": 6}, \"expected\": [1, 2]}",
+        "{\"input\": {\"nums\": [3, 3], \"target\": 6}, \"expected\": [0, 1]}",
+        "{\"input\": {\"nums\": [1, 5, 3, 7, 9], \"target\": 10}, \"expected\": [1, 3]}"
+      ],
+      "hints": [
+        "Consider using a hash map to store values you've seen",
+        "For each number, check if (target - number) exists in your hash map",
+        "Remember to store the index along with the value"
+      ]
+    }
+  ]
+}
