@@ -5,134 +5,333 @@ import { useAuth } from "../utils/AuthContext";
 
 const XP_PER_CORRECT = 10;
 
-const quizStyles = {
-    container: {
-        minHeight: '100vh',
-        backgroundColor: '#1a1a1a',
-        padding: '0',
-    },
-    content: {
-        maxWidth: '800px',
-        margin: '0 auto',
-        padding: '2rem',
-    },
-    card: {
-        backgroundColor: '#2d2d2d',
-        borderRadius: '16px',
-        padding: '2rem',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
-        border: '1px solid #3d3d3d',
-    },
-    progressBar: {
-        backgroundColor: '#3d3d3d',
-        borderRadius: '8px',
-        height: '8px',
-        marginBottom: '1.5rem',
-        overflow: 'hidden' as const,
-    },
-    progressFill: (progress: number) => ({
-        backgroundColor: '#ff9500',
-        height: '100%',
-        width: `${progress}%`,
-        transition: 'width 0.3s ease',
-        borderRadius: '8px',
-    }),
-    progressText: {
-        color: '#808080',
-        fontSize: '0.9rem',
-        marginBottom: '0.5rem',
-        fontFamily: "'Fira Code', monospace",
-    },
-    title: {
-        color: '#ff9500',
-        fontSize: '1.5rem',
-        marginBottom: '1rem',
-        fontFamily: "'Fira Code', monospace",
-        fontWeight: 600,
-    },
-    question: {
-        color: '#ffffff',
-        fontSize: '1.25rem',
-        marginBottom: '2rem',
-        fontFamily: "'Fira Code', monospace",
-        lineHeight: 1.6,
-    },
-    optionsContainer: {
-        display: 'flex',
-        flexDirection: 'column' as const,
-        gap: '1rem',
-    },
-    optionButton: {
-        backgroundColor: '#3d3d3d',
-        color: '#e0e0e0',
-        border: '2px solid #4d4d4d',
-        borderRadius: '12px',
-        padding: '1rem 1.5rem',
-        fontSize: '1rem',
-        fontFamily: "'Fira Code', monospace",
-        cursor: 'pointer',
-        textAlign: 'left' as const,
-        transition: 'all 0.2s ease',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-    },
-    optionLetter: {
-        backgroundColor: '#ff9500',
-        color: '#1a1a1a',
-        width: '32px',
-        height: '32px',
-        borderRadius: '8px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 700,
-        flexShrink: 0,
-    },
-    emptyState: {
-        textAlign: 'center' as const,
-        padding: '4rem 2rem',
-    },
-    emptyText: {
-        color: '#808080',
-        fontSize: '1.1rem',
-        marginBottom: '1.5rem',
-        fontFamily: "'Fira Code', monospace",
-    },
-    backButton: {
-        backgroundColor: '#ff9500',
-        color: '#1a1a1a',
-        border: 'none',
-        borderRadius: '8px',
-        padding: '0.75rem 2rem',
-        fontSize: '1rem',
-        fontFamily: "'Fira Code', monospace",
-        fontWeight: 600,
-        cursor: 'pointer',
-        transition: 'all 0.2s ease',
-    },
-    completeContainer: {
-        textAlign: 'center' as const,
-        padding: '3rem',
-    },
-    completeEmoji: {
-        fontSize: '4rem',
-        marginBottom: '1rem',
-    },
-    completeTitle: {
-        color: '#ff9500',
-        fontSize: '2rem',
-        marginBottom: '1rem',
-        fontFamily: "'Fira Code', monospace",
-        fontWeight: 700,
-    },
-    completeText: {
-        color: '#e0e0e0',
-        fontSize: '1.1rem',
-        marginBottom: '2rem',
-        fontFamily: "'Fira Code', monospace",
-    },
-};
+/* ── responsive CSS injected once ── */
+const quizCss = `
+.quiz-page {
+    min-height: 100vh;
+    background-color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ── top header strip ── */
+.quiz-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.75rem 2.5rem;
+    background: #232323;
+    border-bottom: 1px solid #2f2f2f;
+    flex-wrap: wrap;
+}
+.quiz-header__xp {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+.quiz-header__xp-icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, #ff9500, #ff7700);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700; color: #1a1a1a;
+    flex-shrink: 0;
+    box-shadow: 0 2px 8px rgba(255,149,0,.35);
+}
+.quiz-header__xp-text {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: #ccc;
+    white-space: nowrap;
+}
+.quiz-header__xp-text strong {
+    color: #ff9500;
+    font-size: 0.95rem;
+}
+.quiz-header__level {
+    font-family: 'Fira Code', monospace;
+    font-weight: 700;
+    font-size: 0.8rem;
+    color: #1a1a1a;
+    background: #ff9500;
+    padding: 2px 10px;
+    border-radius: 6px;
+}
+.quiz-header__xp-bar-wrap {
+    width: 110px;
+    height: 7px;
+    background: #3d3d3d;
+    border-radius: 6px;
+    overflow: hidden;
+}
+.quiz-header__xp-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff9500, #ffb347);
+    border-radius: 6px;
+    transition: width .4s ease;
+}
+.quiz-header__progress {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 180px;
+}
+.quiz-header__progress-label {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85rem;
+    color: #999;
+    white-space: nowrap;
+}
+.quiz-header__progress-bar {
+    flex: 1;
+    max-width: 260px;
+    height: 8px;
+    background: #3d3d3d;
+    border-radius: 8px;
+    overflow: hidden;
+}
+.quiz-header__progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff9500, #ff7700);
+    border-radius: 8px;
+    transition: width .35s ease;
+}
+.quiz-header__quit {
+    font-family: 'Fira Code', monospace;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #ff4d4d;
+    background: rgba(255,77,77,.1);
+    border: 1px solid rgba(255,77,77,.35);
+    border-radius: 8px;
+    padding: 6px 18px;
+    cursor: pointer;
+    transition: all .2s ease;
+    white-space: nowrap;
+}
+.quiz-header__quit:hover {
+    background: rgba(255,77,77,.22);
+    border-color: #ff4d4d;
+    transform: translateY(-1px);
+}
+
+/* ── main content area ── */
+.quiz-body {
+    flex: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 2.5rem 2rem 3rem;
+}
+.quiz-card {
+    width: 100%;
+    max-width: 960px;
+    background: #2d2d2d;
+    border-radius: 18px;
+    padding: 2.5rem 3rem;
+    box-shadow: 0 10px 40px rgba(0,0,0,.35);
+    border: 1px solid #3d3d3d;
+}
+
+/* ── question ── */
+.quiz-card__title {
+    color: #ff9500;
+    font-size: 1.35rem;
+    margin: 0 0 0.75rem;
+    font-family: 'Fira Code', monospace;
+    font-weight: 600;
+}
+.quiz-card__question {
+    color: #fff;
+    font-size: 1.2rem;
+    margin: 0 0 2rem;
+    font-family: 'Fira Code', monospace;
+    line-height: 1.65;
+}
+
+/* ── options ── */
+.quiz-options {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.quiz-option {
+    background: #3d3d3d;
+    color: #e0e0e0;
+    border: 2px solid #4d4d4d;
+    border-radius: 12px;
+    padding: 1rem 1.5rem;
+    font-size: 1rem;
+    font-family: 'Fira Code', monospace;
+    cursor: pointer;
+    text-align: left;
+    transition: all .2s ease;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+.quiz-option:hover {
+    border-color: #ff9500;
+    background: #454545;
+    transform: translateX(4px);
+}
+.quiz-option__letter {
+    background: #ff9500;
+    color: #1a1a1a;
+    width: 34px; height: 34px;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 700;
+    flex-shrink: 0;
+    font-size: 0.95rem;
+}
+
+/* ── feedback ── */
+.quiz-feedback {
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
+    font-family: 'Fira Code', monospace;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+}
+.quiz-feedback--correct {
+    background: rgba(76,175,80,.15);
+    color: #4caf50;
+    border: 1px solid rgba(76,175,80,.3);
+}
+.quiz-feedback--incorrect {
+    background: rgba(244,67,54,.15);
+    color: #f44336;
+    border: 1px solid rgba(244,67,54,.3);
+}
+
+/* ── level up ── */
+.quiz-levelup {
+    padding: 1rem 1.5rem;
+    border-radius: 12px;
+    margin-bottom: 1.25rem;
+    background: linear-gradient(135deg, rgba(255,215,0,.2), rgba(255,149,0,.15));
+    border: 2px solid rgba(255,215,0,.5);
+    text-align: center;
+    animation: levelUpPulse .6s ease-out;
+}
+.quiz-levelup span {
+    color: #ffd700;
+    font-size: 1.15rem;
+    font-weight: 700;
+    font-family: 'Fira Code', monospace;
+}
+
+/* ── completion screen ── */
+.quiz-complete {
+    text-align: center;
+    padding: 3rem 2rem;
+}
+.quiz-complete__badge {
+    width: 88px; height: 88px;
+    margin: 0 auto 28px;
+    background: linear-gradient(135deg, #ff9500, #ff7700);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 36px rgba(255,149,0,.45);
+    font-size: 2.2rem; color: #1a1a1a; font-weight: 700;
+}
+.quiz-complete__title {
+    color: #ff9500;
+    font-size: 2rem;
+    margin: 0 0 .75rem;
+    font-family: 'Fira Code', monospace;
+    font-weight: 700;
+}
+.quiz-complete__text {
+    color: #e0e0e0;
+    font-size: 1.1rem;
+    margin: 0 0 1.75rem;
+    font-family: 'Fira Code', monospace;
+}
+.quiz-complete__xp-box {
+    background: linear-gradient(135deg, rgba(255,149,0,.15), rgba(255,119,0,.1));
+    border: 1px solid rgba(255,149,0,.3);
+    border-radius: 12px;
+    padding: 18px 28px;
+    margin-bottom: 28px;
+    display: inline-block;
+}
+.quiz-complete__xp-box span {
+    color: #ff9500;
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Fira Code', monospace;
+}
+.quiz-btn-primary {
+    background: #ff9500;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 8px;
+    padding: .8rem 2.4rem;
+    font-size: 1rem;
+    font-family: 'Fira Code', monospace;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s ease;
+}
+.quiz-btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(255,149,0,.45);
+}
+
+/* ── empty state ── */
+.quiz-empty {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+.quiz-empty p {
+    color: #808080;
+    font-size: 1.1rem;
+    margin-bottom: 1.5rem;
+    font-family: 'Fira Code', monospace;
+}
+
+/* ── animations ── */
+@keyframes xpFloat {
+    0%   { opacity: 0; transform: translateY(10px) scale(.8); }
+    50%  { opacity: 1; transform: translateY(-5px) scale(1.1); }
+    100% { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes levelUpPulse {
+    0%   { opacity: 0; transform: scale(.85); }
+    50%  { transform: scale(1.04); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* ── responsive ── */
+@media (max-width: 768px) {
+    .quiz-header { padding: 0.6rem 1rem; gap: 0.6rem; }
+    .quiz-header__progress { min-width: 0; }
+    .quiz-header__progress-bar { max-width: 120px; }
+    .quiz-header__xp-bar-wrap { width: 70px; }
+    .quiz-body { padding: 1.5rem 1rem 2rem; }
+    .quiz-card { padding: 1.5rem 1.25rem; border-radius: 14px; }
+    .quiz-card__question { font-size: 1.05rem; }
+    .quiz-option { padding: 0.85rem 1rem; font-size: 0.92rem; }
+}
+@media (max-width: 480px) {
+    .quiz-header { flex-direction: column; align-items: stretch; }
+    .quiz-header__progress { justify-content: flex-start; }
+    .quiz-header__quit { align-self: flex-end; }
+    .quiz-card { padding: 1.25rem 1rem; }
+    .quiz-card__title { font-size: 1.1rem; }
+    .quiz-card__question { font-size: 0.98rem; }
+}
+`;
 
 const quizSessionKey = (userId: number) => `quizPageSession_${userId}`;
 
@@ -231,30 +430,27 @@ function QuizPage() {
         }
     }
 
+    function handleQuitQuiz() {
+        if (QUIZ_SESSION_KEY) sessionStorage.removeItem(QUIZ_SESSION_KEY);
+        navigate('/prompt');
+    }
+
     if (!quiz.length) {
         return (
-            <div style={quizStyles.container}>
-                <Navbar />
-                <div style={quizStyles.content}>
-                    <div style={{ ...quizStyles.card, ...quizStyles.emptyState }}>
-                        <p style={quizStyles.emptyText}>No quiz data found. Go back and generate a quiz first.</p>
-                        <button 
-                            style={quizStyles.backButton} 
-                            onClick={() => { if (QUIZ_SESSION_KEY) sessionStorage.removeItem(QUIZ_SESSION_KEY); navigate('/prompt'); }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 149, 0, 0.4)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                            }}
-                        >
-                            Back to Prompt
-                        </button>
+            <>
+                <style>{quizCss}</style>
+                <div className="quiz-page">
+                    <Navbar />
+                    <div className="quiz-body">
+                        <div className="quiz-card quiz-empty">
+                            <p>No quiz data found. Go back and generate a quiz first.</p>
+                            <button className="quiz-btn-primary" onClick={handleQuitQuiz}>
+                                Back to Prompt
+                            </button>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </>
         );
     }
 
@@ -262,8 +458,6 @@ function QuizPage() {
     const progress = ((currentIndex) / quiz.length) * 100;
 
     function handleAnswer(option: string, index: number) {
-        console.log("Selected option:", option);
-
         const letterFromIndex = ["A", "B", "C", "D"][index];
         const isCorrect = letterFromIndex === currentQ.correct_answer;
 
@@ -273,11 +467,8 @@ function QuizPage() {
             return;
         }
 
-        // Show XP animation
         setShowXpAnimation(true);
         setTotalXpEarned(prev => prev + XP_PER_CORRECT);
-        
-        // Add XP to user account
         addXpToUser();
 
         setFeedbackMessage("Correct!");
@@ -292,64 +483,76 @@ function QuizPage() {
         }, 800);
     }
 
-    if (finished) {
-        return (
-            <div style={quizStyles.container}>
-                <Navbar />
-                <div style={quizStyles.content}>
-                    <div style={{ ...quizStyles.card, ...quizStyles.completeContainer }}>
-                        <div style={{
-                            width: '80px',
-                            height: '80px',
-                            margin: '0 auto 24px',
-                            background: 'linear-gradient(135deg, #ff9500 0%, #ff7700 100%)',
-                            borderRadius: '50%',
-                            position: 'relative' as const,
-                            boxShadow: '0 8px 32px rgba(255, 149, 0, 0.4)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}>
-                            <span style={{ 
-                                color: '#1a1a1a', 
-                                fontSize: '2rem', 
-                                fontWeight: 700 
-                            }}>✓</span>
+    /* ── Header bar (shared by active quiz & completion screen) ── */
+    const headerBar = (
+        <div className="quiz-header">
+            {/* Left: XP */}
+            <div className="quiz-header__xp">
+                <span className="quiz-header__xp-icon">⚡</span>
+                {user && (
+                    <>
+                        <span className="quiz-header__level">LVL {user.level}</span>
+                        <div className="quiz-header__xp-bar-wrap">
+                            <div
+                                className="quiz-header__xp-bar-fill"
+                                style={{ width: `${(user.exp / (user.xp_required ?? 100)) * 100}%` }}
+                            />
                         </div>
-                        <h1 style={quizStyles.completeTitle}>Quiz Complete!</h1>
-                        <p style={quizStyles.completeText}>Great job! You've completed all {quiz.length} questions.</p>
-                        <div style={{
-                            background: 'linear-gradient(135deg, rgba(255, 149, 0, 0.15) 0%, rgba(255, 119, 0, 0.1) 100%)',
-                            border: '1px solid rgba(255, 149, 0, 0.3)',
-                            borderRadius: '12px',
-                            padding: '16px 24px',
-                            marginBottom: '24px',
-                        }}>
-                            <p style={{
-                                color: '#ff9500',
-                                fontSize: '1.5rem',
-                                fontWeight: 700,
-                                margin: 0,
-                                fontFamily: "'Fira Code', monospace",
-                            }}>+{totalXpEarned} XP Earned!</p>
-                        </div>
-                        <button 
-                            style={quizStyles.backButton} 
-                            onClick={() => { if (QUIZ_SESSION_KEY) sessionStorage.removeItem(QUIZ_SESSION_KEY); navigate('/prompt'); }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = 'translateY(-2px)';
-                                e.currentTarget.style.boxShadow = '0 4px 12px rgba(255, 149, 0, 0.4)';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.transform = 'translateY(0)';
-                                e.currentTarget.style.boxShadow = 'none';
-                            }}
-                        >
-                            Create Another Quiz
-                        </button>
+                        <span className="quiz-header__xp-text">
+                            <strong>{user.exp}</strong>/{user.xp_required ?? 100} XP
+                        </span>
+                    </>
+                )}
+            </div>
+
+            {/* Center: Progress */}
+            {!finished && (
+                <div className="quiz-header__progress">
+                    <span className="quiz-header__progress-label">
+                        Question {currentIndex + 1}/{quiz.length}
+                    </span>
+                    <div className="quiz-header__progress-bar">
+                        <div
+                            className="quiz-header__progress-fill"
+                            style={{ width: `${progress}%` }}
+                        />
                     </div>
                 </div>
-            </div>
+            )}
+
+            {/* Right: Quit */}
+            <button className="quiz-header__quit" onClick={handleQuitQuiz}>
+                ✕ Quit Quiz
+            </button>
+        </div>
+    );
+
+    /* ── Completion screen ── */
+    if (finished) {
+        return (
+            <>
+                <style>{quizCss}</style>
+                <div className="quiz-page">
+                    <Navbar />
+                    {headerBar}
+                    <div className="quiz-body">
+                        <div className="quiz-card quiz-complete">
+                            <div className="quiz-complete__badge">✓</div>
+                            <h1 className="quiz-complete__title">Quiz Complete!</h1>
+                            <p className="quiz-complete__text">
+                                Great job! You've completed all {quiz.length} questions.
+                            </p>
+                            <div className="quiz-complete__xp-box">
+                                <span>+{totalXpEarned} XP Earned!</span>
+                            </div>
+                            <br />
+                            <button className="quiz-btn-primary" onClick={handleQuitQuiz}>
+                                Create Another Quiz
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </>
         );
     }
 
@@ -357,166 +560,61 @@ function QuizPage() {
         return <p style={{ color: '#808080', textAlign: 'center', padding: '2rem' }}>No quiz data found</p>;
     }
 
+    /* ── Active quiz screen ── */
     return (
-        <div style={quizStyles.container}>
-            <Navbar />
-            <div style={quizStyles.content}>
-                <div style={quizStyles.card}>
-                    {/* XP Status Bar */}
-                    {user && (
-                        <div style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: '10px 14px',
-                            marginBottom: '1.25rem',
-                            backgroundColor: '#252525',
-                            borderRadius: '10px',
-                            border: '1px solid #3d3d3d',
-                        }}>
-                            <span style={{
-                                color: '#ff9500',
-                                fontWeight: 700,
-                                fontFamily: "'Fira Code', monospace",
-                                fontSize: '0.85rem',
-                                whiteSpace: 'nowrap' as const,
-                            }}>LVL {user.level}</span>
-                            <div style={{
-                                flex: 1,
-                                backgroundColor: '#3d3d3d',
-                                borderRadius: '6px',
-                                height: '10px',
-                                overflow: 'hidden',
-                            }}>
-                                <div style={{
-                                    width: `${(user.exp / (user.xp_required ?? 100)) * 100}%`,
-                                    height: '100%',
-                                    background: 'linear-gradient(90deg, #ff9500, #ffb347)',
-                                    borderRadius: '6px',
-                                    transition: 'width 0.4s ease',
-                                }} />
+        <>
+            <style>{quizCss}</style>
+            <div className="quiz-page">
+                <Navbar />
+                {headerBar}
+
+                <div className="quiz-body">
+                    <div className="quiz-card">
+                        <h2 className="quiz-card__title">{currentQ.title}</h2>
+                        <h3 className="quiz-card__question">{currentQ.question}</h3>
+
+                        {/* Level Up Banner */}
+                        {levelUpInfo.show && (
+                            <div className="quiz-levelup">
+                                <span>🎉 Level Up! You're now Level {levelUpInfo.newLevel}!</span>
                             </div>
-                            <span style={{
-                                color: '#808080',
-                                fontFamily: "'Fira Code', monospace",
-                                fontSize: '0.8rem',
-                                whiteSpace: 'nowrap' as const,
-                            }}>{user.exp}/{user.xp_required ?? 100} XP</span>
+                        )}
+
+                        {/* Feedback */}
+                        {feedbackMessage && (
+                            <div className={`quiz-feedback ${feedbackMessage.includes('Correct') ? 'quiz-feedback--correct' : 'quiz-feedback--incorrect'}`}>
+                                <span>{feedbackMessage}</span>
+                                {showXpAnimation && (
+                                    <span style={{
+                                        color: '#ff9500',
+                                        fontWeight: 700,
+                                        animation: 'xpFloat 0.8s ease-out forwards',
+                                    }}>
+                                        +{XP_PER_CORRECT} XP
+                                    </span>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Options */}
+                        <div className="quiz-options">
+                            {currentQ.options.map((opt: string, i: number) => (
+                                <button
+                                    key={i}
+                                    className="quiz-option"
+                                    onClick={() => handleAnswer(opt, i)}
+                                >
+                                    <span className="quiz-option__letter">
+                                        {["A", "B", "C", "D"][i]}
+                                    </span>
+                                    {opt}
+                                </button>
+                            ))}
                         </div>
-                    )}
-
-                    <p style={quizStyles.progressText}>Question {currentIndex + 1} of {quiz.length}</p>
-                    <div style={quizStyles.progressBar}>
-                        <div style={quizStyles.progressFill(progress)}></div>
-                    </div>
-
-                    <h2 style={quizStyles.title}>{currentQ.title}</h2>
-                    <h3 style={quizStyles.question}>{currentQ.question}</h3>
-
-                    {/* Level Up Banner */}
-                    {levelUpInfo.show && (
-                        <div style={{
-                            padding: '1rem 1.5rem',
-                            borderRadius: '12px',
-                            marginBottom: '1rem',
-                            background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 149, 0, 0.2) 100%)',
-                            border: '2px solid rgba(255, 215, 0, 0.6)',
-                            textAlign: 'center' as const,
-                            animation: 'levelUpPulse 0.6s ease-out',
-                        }}>
-                            <span style={{
-                                color: '#ffd700',
-                                fontSize: '1.2rem',
-                                fontWeight: 700,
-                                fontFamily: "'Fira Code', monospace",
-                            }}>
-                                Level Up! You're now Level {levelUpInfo.newLevel}!
-                            </span>
-                        </div>
-                    )}
-
-                    {feedbackMessage && (
-                        <div style={{
-                            padding: '0.75rem 1rem',
-                            borderRadius: '8px',
-                            marginBottom: '1rem',
-                            backgroundColor: feedbackMessage.includes('Correct') ? 'rgba(76, 175, 80, 0.2)' : 'rgba(244, 67, 54, 0.2)',
-                            color: feedbackMessage.includes('Correct') ? '#4caf50' : '#f44336',
-                            fontFamily: "'Fira Code', monospace",
-                            textAlign: 'center' as const,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '12px',
-                        }}>
-                            <span>{feedbackMessage}</span>
-                            {showXpAnimation && (
-                                <span style={{
-                                    color: '#ff9500',
-                                    fontWeight: 700,
-                                    animation: 'xpFloat 0.8s ease-out forwards',
-                                }}>
-                                    +{XP_PER_CORRECT} XP
-                                </span>
-                            )}
-                        </div>
-                    )}
-
-                    <style>{`
-                        @keyframes xpFloat {
-                            0% {
-                                opacity: 0;
-                                transform: translateY(10px) scale(0.8);
-                            }
-                            50% {
-                                opacity: 1;
-                                transform: translateY(-5px) scale(1.1);
-                            }
-                            100% {
-                                opacity: 1;
-                                transform: translateY(0) scale(1);
-                            }
-                        }
-                        @keyframes levelUpPulse {
-                            0% {
-                                opacity: 0;
-                                transform: scale(0.8);
-                            }
-                            50% {
-                                transform: scale(1.05);
-                            }
-                            100% {
-                                opacity: 1;
-                                transform: scale(1);
-                            }
-                        }
-                    `}</style>
-
-                    <div style={quizStyles.optionsContainer}>
-                        {currentQ.options.map((opt: string, i: number) => (
-                            <button 
-                                key={i}
-                                style={quizStyles.optionButton}
-                                onClick={() => handleAnswer(opt, i)}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.borderColor = '#ff9500';
-                                    e.currentTarget.style.backgroundColor = '#454545';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.borderColor = '#4d4d4d';
-                                    e.currentTarget.style.backgroundColor = '#3d3d3d';
-                                }}
-                            >
-                                <span style={quizStyles.optionLetter}>
-                                    {["A", "B", "C", "D"][i]}
-                                </span>
-                                {opt}
-                            </button>
-                        ))}
                     </div>
                 </div>
             </div>
-        </div>
+        </>
     );
 }
 
