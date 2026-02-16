@@ -174,10 +174,24 @@ const quizCss = `
     align-items: center;
     gap: 1rem;
 }
-.quiz-option:hover {
+.quiz-option:hover:not(.quiz-option--disabled) {
     border-color: #ff9500;
     background: #454545;
     transform: translateX(4px);
+}
+.quiz-option--disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.quiz-option--correct {
+    background: rgba(76,175,80,.2);
+    border-color: #4caf50;
+    color: #4caf50;
+}
+.quiz-option--incorrect {
+    background: rgba(244,67,54,.2);
+    border-color: #f44336;
+    color: #f44336;
 }
 .quiz-option__letter {
     background: #ff9500;
@@ -385,6 +399,10 @@ function QuizPage() {
         return savedSession?.totalXpEarned ?? 0;
     });
 
+    const [answered, setAnswered] = useState(false);
+    const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null);
+    const [correctAnswerIndex, setCorrectAnswerIndex] = useState<number | null>(null);
+
     const [levelUpInfo, setLevelUpInfo] = useState<{ show: boolean; newLevel: number | null }>({ show: false, newLevel: null });
 
     // Persist quiz session to sessionStorage whenever progress changes
@@ -457,21 +475,38 @@ function QuizPage() {
     const currentQ = quiz[currentIndex];
     const progress = ((currentIndex) / quiz.length) * 100;
 
+    // Reset answered state when question changes
+    useEffect(() => {
+        setAnswered(false);
+        setSelectedAnswer(null);
+        setCorrectAnswerIndex(null);
+    }, [currentIndex]);
+
     function handleAnswer(option: string, index: number) {
+        // Prevent multiple attempts on same question
+        if (answered) return;
+
         const letterFromIndex = ["A", "B", "C", "D"][index];
         const isCorrect = letterFromIndex === currentQ.correct_answer;
+        
+        // Find correct answer index
+        const correctIdx = ["A", "B", "C", "D"].indexOf(currentQ.correct_answer);
+        
+        // Lock the question immediately
+        setAnswered(true);
+        setSelectedAnswer(index);
+        setCorrectAnswerIndex(correctIdx);
 
-        if (!isCorrect) {
-            setFeedbackMessage("Incorrect! Try again.");
-            setTimeout(() => setFeedbackMessage(null), 1500);
-            return;
+        if (isCorrect) {
+            setShowXpAnimation(true);
+            setTotalXpEarned(prev => prev + XP_PER_CORRECT);
+            addXpToUser();
+            setFeedbackMessage("Correct!");
+        } else {
+            setFeedbackMessage(`Incorrect! The correct answer was ${currentQ.correct_answer}.`);
         }
 
-        setShowXpAnimation(true);
-        setTotalXpEarned(prev => prev + XP_PER_CORRECT);
-        addXpToUser();
-
-        setFeedbackMessage("Correct!");
+        // Auto-advance to next question after delay
         setTimeout(() => {
             setFeedbackMessage(null);
             setShowXpAnimation(false);
@@ -480,7 +515,7 @@ function QuizPage() {
             } else {
                 setFinished(true);
             }
-        }, 800);
+        }, 2000);
     }
 
     /* ── Header bar (shared by active quiz & completion screen) ── */
@@ -598,18 +633,32 @@ function QuizPage() {
 
                         {/* Options */}
                         <div className="quiz-options">
-                            {currentQ.options.map((opt: string, i: number) => (
-                                <button
-                                    key={i}
-                                    className="quiz-option"
-                                    onClick={() => handleAnswer(opt, i)}
-                                >
-                                    <span className="quiz-option__letter">
-                                        {["A", "B", "C", "D"][i]}
-                                    </span>
-                                    {opt}
-                                </button>
-                            ))}
+                            {currentQ.options.map((opt: string, i: number) => {
+                                let optionClass = "quiz-option";
+                                
+                                if (answered) {
+                                    optionClass += " quiz-option--disabled";
+                                    if (i === correctAnswerIndex) {
+                                        optionClass += " quiz-option--correct";
+                                    } else if (i === selectedAnswer) {
+                                        optionClass += " quiz-option--incorrect";
+                                    }
+                                }
+                                
+                                return (
+                                    <button
+                                        key={i}
+                                        className={optionClass}
+                                        onClick={() => handleAnswer(opt, i)}
+                                        disabled={answered}
+                                    >
+                                        <span className="quiz-option__letter">
+                                            {["A", "B", "C", "D"][i]}
+                                        </span>
+                                        {opt}
+                                    </button>
+                                );
+                            })}
                         </div>
                     </div>
                 </div>
