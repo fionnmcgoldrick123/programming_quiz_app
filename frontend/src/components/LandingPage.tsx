@@ -4,20 +4,20 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../utils/AuthContext";
 import '../css-files/LandingPage.css'
 
+const phrases = [
+    "Master coding challenges daily",
+    "Improve your programming skills",
+    "Learn with AI-powered feedback",
+    "Practice makes perfect",
+    "Build your coding confidence"
+];
+
 function LandingPage(){
     const navigate = useNavigate();
     const { user, isAuthenticated } = useAuth();
     const [displayedText, setDisplayedText] = useState("");
     const [currentPhrase, setCurrentPhrase] = useState(0);
     const [isDeleting, setIsDeleting] = useState(false);
-
-    const phrases = [
-        "Master coding challenges daily",
-        "Improve your programming skills",
-        "Learn with AI-powered feedback",
-        "Practice makes perfect",
-        "Build your coding confidence"
-    ];
 
     useEffect(() => {
         let timeout: ReturnType<typeof setTimeout>;

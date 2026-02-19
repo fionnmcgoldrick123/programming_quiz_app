@@ -33,7 +33,7 @@ function Navbar(){
                     return;
                 }
             }
-        } catch (e) { /* ignore parse errors, fall through */ }
+        } catch { /* ignore parse errors, fall through */ }
         navigate('/prompt');
     }
 

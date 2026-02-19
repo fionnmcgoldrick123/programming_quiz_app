@@ -263,7 +263,7 @@ function PromptPage(){
                             );
                         }
                     }
-                } catch (e) { /* ignore */ }
+                } catch { /* ignore */ }
                 return null;
             })()}
 

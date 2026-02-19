@@ -2,6 +2,7 @@
 Main FastAPI application.
 Routes requests to appropriate modules for handling.
 """
+
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -13,13 +14,13 @@ from auth import verify_token
 
 # Import Pydantic models
 from pydantic_models import (
-    PromptRequest, 
-    RegisterRequest, 
-    ModelRequest, 
-    LoginRequest, 
+    PromptRequest,
+    RegisterRequest,
+    ModelRequest,
+    LoginRequest,
     AddXpRequest,
     RunCodeRequest,
-    SubmitCodeRequest
+    SubmitCodeRequest,
 )
 
 # Import service modules
@@ -36,14 +37,15 @@ current_model = DEFAULT_MODEL
 # Configure CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,   
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],           
-    allow_headers=["*"],            
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
 # --- Root Endpoints ---
+
 
 @app.get("/")
 async def read_root():
@@ -61,16 +63,16 @@ async def health_check():
 
 
 @app.post("/prompt")
-async def send_prompt(prompt: PromptRequest):  
+async def send_prompt(prompt: PromptRequest):
     """
     Send a prompt to the currently selected AI model for quiz generation.
-    
+
     Args:
         prompt (PromptRequest): The prompt request object containing the user's prompt.
-        
+
     Returns:
         Parsed quiz data from the selected model.
-    """  
+    """
     global current_model
     return await send_prompt_to_model(prompt, current_model)
 
@@ -79,19 +81,19 @@ async def send_prompt(prompt: PromptRequest):
 async def change_model(model: ModelRequest):
     """
     Change the currently active AI model.
-    
+
     Args:
         model (ModelRequest): The model selection request.
-        
+
     Returns:
         dict: Confirmation message or error.
     """
     if model.model not in SUPPORTED_MODELS:
         return {"error": "Unknown Model"}
-    
+
     global current_model
     current_model = model.model
-    
+
     print(f"Now using {current_model}")
     return {"message": f"now using {current_model}"}
 
@@ -103,10 +105,10 @@ async def change_model(model: ModelRequest):
 async def register(user_data: RegisterRequest):
     """
     Register a new user.
-    
+
     Args:
         user_data (RegisterRequest): The registration request object.
-        
+
     Returns:
         dict: Success message or error.
     """
@@ -117,10 +119,10 @@ async def register(user_data: RegisterRequest):
 async def login(login_data: LoginRequest):
     """
     Authenticate a user and return a JWT token.
-    
+
     Args:
         login_data (LoginRequest): The login request containing email and password.
-        
+
     Returns:
         dict: JWT token and user data or an error message.
     """
@@ -131,10 +133,10 @@ async def login(login_data: LoginRequest):
 async def get_current_user(token_data: dict = Depends(verify_token)):
     """
     Get the current authenticated user's profile.
-    
+
     Args:
         token_data (dict): The decoded JWT token data.
-    
+
     Returns:
         dict: User profile data.
     """
@@ -148,11 +150,11 @@ async def get_current_user(token_data: dict = Depends(verify_token)):
 async def add_xp(xp_data: AddXpRequest, token_data: dict = Depends(verify_token)):
     """
     Add XP to the authenticated user's account.
-    
+
     Args:
         xp_data (AddXpRequest): The XP amount to add.
         token_data (dict): The decoded JWT token data.
-        
+
     Returns:
         dict: Updated user data with new XP and level.
     """
@@ -161,14 +163,15 @@ async def add_xp(xp_data: AddXpRequest, token_data: dict = Depends(verify_token)
 
 # --- Code Execution Endpoints ---
 
+
 @app.post("/run-code")
 async def execute_code_endpoint(request: RunCodeRequest):
     """
     Execute code and return the output or error.
-    
+
     Args:
         request (RunCodeRequest): Contains code and language.
-        
+
     Returns:
         dict: Execution result with output or error.
     """
@@ -179,10 +182,10 @@ async def execute_code_endpoint(request: RunCodeRequest):
 async def submit_code_endpoint(request: SubmitCodeRequest):
     """
     Execute code against test cases and return results.
-    
+
     Args:
         request (SubmitCodeRequest): Contains code, language, and test cases.
-        
+
     Returns:
         dict: Test results with pass/fail status for each test case.
     """

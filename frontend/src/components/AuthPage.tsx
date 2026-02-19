@@ -88,7 +88,7 @@ function AuthPage() {
                 const data = await response.json();
                 setError(data.detail || "Registration failed");
             }
-        } catch (err) {
+        } catch {
             setError("An error occurred during registration");
         }
 

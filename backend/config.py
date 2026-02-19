@@ -2,6 +2,7 @@
 Configuration module for the application.
 Contains environment variables, constants, and prompt guides.
 """
+
 import os
 from dotenv import load_dotenv
 
@@ -25,16 +26,18 @@ CORS_ORIGINS = [
 PROMPT_GUIDE_FILE = "./prompt_guide.txt"
 CODING_PROMPT_GUIDE_FILE = "./coding_prompt_guide.txt"
 
+
 # Load Prompt Guides
 def load_prompt_guides():
     """Load quiz format guides from files."""
     with open(PROMPT_GUIDE_FILE, "r", encoding="utf-8") as file:
         quiz_format_guide = file.read()
-    
+
     with open(CODING_PROMPT_GUIDE_FILE, "r", encoding="utf-8") as file:
         coding_format_guide = file.read()
-    
+
     return quiz_format_guide, coding_format_guide
+
 
 QUIZ_FORMAT_GUIDE, CODING_FORMAT_GUIDE = load_prompt_guides()
 

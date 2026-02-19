@@ -10,6 +10,7 @@ This project uses:
 - **Database:** ``PostgreSQL`` with ``TablePlus``
 - **Containerisation:** ``Docker`` / ``Docker Compose  ``
 - **AI Layer:** Pluggable LLM endpoints
+- **CI/CD:** ``GitHub Actions``
 
 This app is part of my Final Year Project:  
 **Development of an AI-Powered Web Platform for Adaptive Programming Quizzes and Practical Learning.**
@@ -142,6 +143,24 @@ FinalYearProject/
 - User accounts & authentication
 
 - Gamification rewarding (XP, streaks, rewards)
+
+---
+
+## CI/CD Pipeline
+
+This project uses **GitHub Actions** for automated testing and quality checks. The pipeline runs on every push and pull request to ensure code quality and catch issues early.
+
+### Pipeline Jobs
+
+- **Frontend CI**: ESLint, TypeScript type checking, and build validation
+- **Backend CI**: Python code formatting (Black), linting (Flake8), and syntax validation
+- **Classifier Model CI**: Python linting and syntax validation
+
+The pipeline runs in parallel for faster feedback and automatically validates all code changes before they're merged.
+
+📖 **[View detailed CI/CD documentation](.github/CI-CD-DOCS.md)**
+
+---
 
 ##  Local LLM Experiments (Ollama)
 

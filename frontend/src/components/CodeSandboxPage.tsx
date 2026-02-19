@@ -14,6 +14,15 @@ interface CodeQuestion {
     hints?: string[];
 }
 
+interface TestResult {
+    test_number: number;
+    input: unknown;
+    expected: unknown;
+    actual: unknown;
+    passed?: boolean;
+    error?: string;
+}
+
 const codeSessionKey = (userId: number) => `codeSandboxSession_${userId}`;
 
 function CodeSandboxPage() {
@@ -40,7 +49,7 @@ function CodeSandboxPage() {
             if (!CODE_SESSION_KEY) return null;
             const raw = sessionStorage.getItem(CODE_SESSION_KEY);
             return raw ? JSON.parse(raw) : null;
-        } catch (e) { return null; }
+        } catch { return null; }
     })();
 
     const isFreshQuiz = Boolean(
@@ -113,6 +122,24 @@ function CodeSandboxPage() {
         "rust": "rust",
     };
 
+    const currentQ = questions[currentIndex];
+    const progress = questions.length > 0 ? ((currentIndex) / questions.length) * 100 : 0;
+
+    // Normalise the AI markdown so ReactMarkdown parses bold/italic/code properly.
+    // - Ensure blank lines around headings and fenced code blocks.
+    // - Trim each non-code line so JSX indentation doesn't create <pre> blocks.
+    const questionMarkdown = useMemo(() => {
+        if (!currentQ) return "";
+        let md = currentQ.question ?? "";
+        // Ensure blank line before headings
+        md = md.replace(/([^\n])\n(#{1,3} )/g, "$1\n\n$2");
+        // Ensure blank line before fenced code blocks
+        md = md.replace(/([^\n])\n```/g, "$1\n\n```");
+        // Ensure blank line after closing fenced code blocks
+        md = md.replace(/```\n([^\n])/g, "```\n\n$1");
+        return md;
+    }, [currentQ]);
+
     if (!questions.length) {
         return (
             <div className="sandbox-container">
@@ -131,23 +158,6 @@ function CodeSandboxPage() {
             </div>
         );
     }
-
-    const currentQ = questions[currentIndex];
-    const progress = ((currentIndex) / questions.length) * 100;
-
-    // Normalise the AI markdown so ReactMarkdown parses bold/italic/code properly.
-    // - Ensure blank lines around headings and fenced code blocks.
-    // - Trim each non-code line so JSX indentation doesn't create <pre> blocks.
-    const questionMarkdown = useMemo(() => {
-        let md = currentQ.question ?? "";
-        // Ensure blank line before headings
-        md = md.replace(/([^\n])\n(#{1,3} )/g, "$1\n\n$2");
-        // Ensure blank line before fenced code blocks
-        md = md.replace(/([^\n])\n```/g, "$1\n\n```");
-        // Ensure blank line after closing fenced code blocks
-        md = md.replace(/```\n([^\n])/g, "```\n\n$1");
-        return md;
-    }, [currentQ.question]);
 
     function handleNextQuestion() {
         if (currentIndex + 1 < questions.length) {
@@ -210,7 +220,7 @@ function CodeSandboxPage() {
             
             if (result.success) {
                 let outputText = "✓ All tests passed!\n\n";
-                result.test_results.forEach((test: any) => {
+                result.test_results.forEach((test: TestResult) => {
                     outputText += `Test ${test.test_number}: ✓ PASSED\n`;
                     outputText += `  Input: ${JSON.stringify(test.input)}\n`;
                     outputText += `  Expected: ${JSON.stringify(test.expected)}\n`;
@@ -224,7 +234,7 @@ function CodeSandboxPage() {
                 }, 2000);
             } else {
                 let outputText = "✗ Some tests failed\n\n";
-                result.test_results.forEach((test: any) => {
+                result.test_results.forEach((test: TestResult) => {
                     const status = test.passed ? "✓ PASSED" : "✗ FAILED";
                     outputText += `Test ${test.test_number}: ${status}\n`;
                     outputText += `  Input: ${JSON.stringify(test.input)}\n`;

@@ -5,6 +5,13 @@ import { useAuth } from "../utils/AuthContext";
 
 const XP_PER_CORRECT = 10;
 
+interface QuizQuestion {
+    title: string;
+    question: string;
+    options: string[];
+    correct_answer: string;
+}
+
 /* ── responsive CSS injected once ── */
 const quizCss = `
 .quiz-page {
@@ -362,7 +369,7 @@ function QuizPage() {
             if (!QUIZ_SESSION_KEY) return null;
             const raw = sessionStorage.getItem(QUIZ_SESSION_KEY);
             return raw ? JSON.parse(raw) : null;
-        } catch (e) { return null; }
+        } catch { return null; }
     })();
 
     // Fresh quiz = location.state has quiz data with a session ID different from saved
@@ -371,7 +378,7 @@ function QuizPage() {
         (!savedSession || savedSession.sessionId !== location.state.sessionId)
     );
 
-    const [quiz] = useState<any[]>(() => {
+    const [quiz] = useState<QuizQuestion[]>(() => {
         if (isFreshQuiz) return location.state.quizData;
         return savedSession?.quiz ?? location.state?.quizData ?? [];
     });
@@ -433,7 +440,8 @@ function QuizPage() {
 
             if (response.ok) {
                 const data = await response.json();
-                // Update user in auth context (strip extra fields)
+                // Update user in auth context (strip extra fields that aren't part of User type)
+                // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { xp_gained, leveled_up, new_level, ...updatedUser } = data;
                 updateUser(updatedUser);
 
@@ -452,6 +460,16 @@ function QuizPage() {
         if (QUIZ_SESSION_KEY) sessionStorage.removeItem(QUIZ_SESSION_KEY);
         navigate('/prompt');
     }
+
+    const currentQ = quiz[currentIndex];
+    const progress = quiz.length > 0 ? ((currentIndex) / quiz.length) * 100 : 0;
+
+    // Reset answered state when question changes
+    useEffect(() => {
+        setAnswered(false);
+        setSelectedAnswer(null);
+        setCorrectAnswerIndex(null);
+    }, [currentIndex]);
 
     if (!quiz.length) {
         return (
@@ -472,17 +490,7 @@ function QuizPage() {
         );
     }
 
-    const currentQ = quiz[currentIndex];
-    const progress = ((currentIndex) / quiz.length) * 100;
-
-    // Reset answered state when question changes
-    useEffect(() => {
-        setAnswered(false);
-        setSelectedAnswer(null);
-        setCorrectAnswerIndex(null);
-    }, [currentIndex]);
-
-    function handleAnswer(option: string, index: number) {
+    function handleAnswer(_option: string, index: number) {
         // Prevent multiple attempts on same question
         if (answered) return;
 
