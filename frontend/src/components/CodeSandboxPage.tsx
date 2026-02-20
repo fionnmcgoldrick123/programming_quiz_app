@@ -303,14 +303,23 @@ function CodeSandboxPage() {
                             onChange={(value) => setCode(value ?? "")}
                             theme="vs-dark"
                             options={{
-                                fontSize: 14,
-                                fontFamily: "'Fira Code', monospace",
+                                fontSize: 13,
+                                fontFamily: "'Courier New', Courier, monospace",
+                                fontLigatures: false,
                                 minimap: { enabled: false },
                                 scrollBeyondLastLine: false,
                                 padding: { top: 16, bottom: 16 },
                                 lineNumbers: "on",
-                                roundedSelection: true,
+                                roundedSelection: false,
                                 automaticLayout: true,
+                                letterSpacing: 0,
+                                lineHeight: 19,
+                                renderWhitespace: "none",
+                                smoothScrolling: false,
+                                cursorBlinking: "solid",
+                                cursorSmoothCaretAnimation: "off",
+                                cursorStyle: "line",
+                                cursorWidth: 2,
                             }}
                         />
                     </div>

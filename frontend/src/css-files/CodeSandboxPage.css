@@ -207,6 +207,36 @@
     min-height: 0;
 }
 
+/* Force Monaco Editor exact character positioning */
+.sandbox-editor-wrapper * {
+    letter-spacing: 0 !important;
+    word-spacing: 0 !important;
+}
+
+.sandbox-editor-wrapper .monaco-editor {
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: "liga" 0, "calt" 0, "clig" 0, "kern" 0 !important;
+    font-feature-settings: "liga" 0, "calt" 0, "clig" 0, "kern" 0 !important;
+    text-rendering: geometricPrecision !important;
+}
+
+.sandbox-editor-wrapper .monaco-editor .view-line,
+.sandbox-editor-wrapper .monaco-editor .view-lines {
+    font-variant-ligatures: none !important;
+    -webkit-font-feature-settings: "liga" 0, "calt" 0 !important;
+    font-feature-settings: "liga" 0, "calt" 0 !important;
+}
+
+/* Force cursor to align left */
+.sandbox-editor-wrapper .monaco-editor .cursors-layer .cursor {
+    transform: translateX(-2px) !important;
+    -webkit-transform: translateX(-2px) !important;
+}
+
+.sandbox-editor-wrapper .monaco-editor .cursor {
+    margin-left: 2px !important;
+}
+
 .sandbox-output-section {
     background-color: #252526;
     border-top: 1px solid #3d3d3d;
