@@ -140,6 +140,11 @@ function CodeSandboxPage() {
         return md;
     }, [currentQ]);
 
+    function handleQuitQuiz() {
+        if (CODE_SESSION_KEY) sessionStorage.removeItem(CODE_SESSION_KEY);
+        navigate('/prompt');
+    }
+
     if (!questions.length) {
         return (
             <div className="sandbox-container">
@@ -149,7 +154,7 @@ function CodeSandboxPage() {
                         <p className="sandbox-empty-text">No coding challenge data found. Go back and generate a quiz first.</p>
                         <button 
                             className="sandbox-back-button"
-                            onClick={() => { if (CODE_SESSION_KEY) sessionStorage.removeItem(CODE_SESSION_KEY); navigate('/prompt'); }}
+                            onClick={handleQuitQuiz}
                         >
                             Back to Prompt
                         </button>
@@ -267,7 +272,7 @@ function CodeSandboxPage() {
                         </p>
                         <button 
                             className="sandbox-back-button"
-                            onClick={() => { if (CODE_SESSION_KEY) sessionStorage.removeItem(CODE_SESSION_KEY); navigate('/prompt'); }}
+                            onClick={handleQuitQuiz}
                         >
                             Start New Challenge
                         </button>
@@ -285,6 +290,9 @@ function CodeSandboxPage() {
                 <div className="sandbox-editor-panel">
                     <div className="sandbox-editor-header">
                         <span className="sandbox-language-badge">{language.toUpperCase()}</span>
+                        <button className="sandbox-quit-button" onClick={handleQuitQuiz}>
+                            ✕ Exit Quiz
+                        </button>
                     </div>
                     
                     <div className="sandbox-editor-wrapper">
