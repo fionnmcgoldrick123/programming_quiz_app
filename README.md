@@ -38,6 +38,34 @@ cd <your-project>
 
 ### 2. Start the FastAPI Backend
 
+## Dataset: IBM Project CodeNet
+
+This project leverages the **IBM Project CodeNet** dataset to build custom AI models and process programming data for adaptive quizzes and code analysis.
+
+### What is IBM Project CodeNet?
+IBM Project CodeNet is a large-scale, open dataset designed for machine learning and code understanding research. It contains:
+
+- **Size:** ~7GB compressed, ~30GB uncompressed
+- **Contents:** Over 14 million code samples across 50+ programming languages
+- **Metadata:** Problem descriptions, submissions, user information, and code correctness labels
+- **Source:** Competitive programming problems from online platforms
+
+### How is CodeNet Used in This Project?
+
+- **Custom Model Training:** The dataset provides diverse code samples and problem metadata, enabling the training of models for code generation, classification, and error detection.
+- **Data Processing:** CodeNet's rich structure allows for extracting programming concepts, language-specific features, and user behavior, which are used to generate adaptive quizzes and validate answers.
+- **Language & Topic Coverage:** With its wide language and topic coverage, CodeNet supports personalized quiz creation for multiple programming languages and skill levels.
+- **Benchmarking:** The dataset is used to benchmark and evaluate the performance of AI models integrated into the platform.
+
+### Why CodeNet?
+CodeNet is ideal for this project because it offers:
+- Real-world code submissions and problem-solving data
+- Extensive language diversity
+- Labeled data for supervised learning tasks
+- Opportunities for research in code understanding, generation, and education
+
+For more information, see the [IBM Project CodeNet website](https://github.com/IBM/Project_CodeNet).
+
 Create a virtual environment:
 
 ```
