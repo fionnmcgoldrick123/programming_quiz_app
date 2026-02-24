@@ -1,69 +1,132 @@
+.nav-auth-buttons {
+    display: flex;
+    align-items: center;
+    margin-left: 32px;
+    gap: 18px;
+    flex-shrink: 0;
+}
+@media (max-width: 900px) {
+    .nav-auth-buttons {
+        margin-left: 0;
+        gap: 8px;
+    }
+}
+
 .nav-container {
     display: flex;
-    gap: 12px;
-    padding: 16px 20px;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
-    border-bottom: 2px solid #ff9500;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-    font-family: 'Fira Code', monospace;
-    justify-content: space-between;
+    flex-direction: row;
     align-items: center;
+    justify-content: flex-start;
+    gap: 0;
+    padding: 0 0 0 16px;
+    background: linear-gradient(135deg, #181818 0%, #23272f 100%);
+    border-bottom: 2.5px solid #ff9500;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+    font-family: 'Fira Code', monospace;
+    min-height: 70px;
+    position: relative;
+    z-index: 10;
 }
 
-.nav-left,
-.nav-right {
-    display: flex;
-    gap: 12px;
-    align-items: center;
+.nav-centered {
+    width: 100vw;
+    justify-content: center;
+    position: relative;
 }
+
+.nav-logo {
+    font-size: 2rem;
+    font-weight: 900;
+    color: #ff9500;
+    margin-right: 40px;
+    letter-spacing: 2px;
+    cursor: pointer;
+    user-select: none;
+    transition: color 0.2s;
+}
+.nav-logo:hover {
+    color: #ff7700;
+}
+
+.nav-links {
+    display: flex;
+    gap: 18px;
+    align-items: center;
+    justify-content: flex-start;
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 100vw;
+    flex-wrap: wrap;
+}
+
+.nav-user-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-left: 16px;
+    margin-right: 0;
+    position: static;
+    height: auto;
+}
+
+
+/* Remove old nav-left/nav-right, replaced by nav-links/nav-user-section */
+
 
 .nav-button {
-    padding: 10px 20px;
-    background-color: #2d2d2d;
+    padding: 10px 24px;
+    background-color: #23272f;
     color: #e0e0e0;
     border: 2px solid #404040;
-    border-radius: 6px;
+    border-radius: 8px;
     font-family: 'Fira Code', monospace;
-    font-size: 13px;
-    font-weight: 600;
+    font-size: 15px;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    transition: all 0.2s cubic-bezier(.4,0,.2,1);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.13);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    min-width: 80px;
+    letter-spacing: 0.7px;
+    min-width: 100px;
+    margin: 0 2px;
 }
+
 
 .nav-button:hover {
     background: linear-gradient(135deg, #ff9500 0%, #ff7700 100%);
-    color: #ffffff;
+    color: #fff;
     border-color: #ff9500;
-    box-shadow: 0 4px 16px rgba(255, 149, 0, 0.4);
-    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(255, 149, 0, 0.25);
+    transform: translateY(-2px) scale(1.04);
 }
 
+
 .nav-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 2px 8px rgba(255, 149, 0, 0.18);
 }
+
 
 .nav-button.nav-register {
     background: linear-gradient(135deg, #ff9500 0%, #ff7700 100%);
-    color: #ffffff;
+    color: #fff;
     border-color: #ff9500;
 }
+
 
 .nav-button.nav-logout {
     background-color: transparent;
     border-color: #ff5555;
     color: #ff5555;
+    font-weight: 700;
 }
+
 
 .nav-button.nav-logout:hover {
     background: #ff5555;
-    color: #ffffff;
+    color: #fff;
     border-color: #ff5555;
-    box-shadow: 0 4px 16px rgba(255, 85, 85, 0.4);
+    box-shadow: 0 4px 16px rgba(255, 85, 85, 0.25);
 }
 
 .nav-user-info {
@@ -103,35 +166,34 @@
     font-weight: 600;
 }
 
-@media (max-width: 768px) {
+
+@media (max-width: 900px) {
     .nav-container {
+        flex-direction: column;
+        align-items: stretch;
+        min-height: unset;
+        padding: 8px 0 0 0;
+    }
+    .nav-logo {
+        margin: 0 0 10px 8px;
+        font-size: 1.5rem;
+    }
+    .nav-links {
+        gap: 8px;
+        justify-content: flex-start;
         flex-wrap: wrap;
-        gap: 8px;
-        padding: 12px 10px;
+        padding-left: 8px;
     }
-
-    .nav-left,
-    .nav-right {
+    .nav-user-section {
+        margin-left: 8px;
+        margin-right: 0;
         gap: 8px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
-
     .nav-button {
-        padding: 8px 16px;
+        padding: 8px 12px;
         font-size: 12px;
         min-width: 70px;
-    }
-
-    .nav-user-info {
-        padding: 6px 12px;
-    }
-
-    .nav-user-avatar {
-        width: 28px;
-        height: 28px;
-        font-size: 12px;
-    }
-
-    .nav-user-name {
-        font-size: 12px;
     }
 }

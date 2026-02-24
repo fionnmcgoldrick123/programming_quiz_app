@@ -42,33 +42,36 @@ function Navbar(){
         navigate("/");
     }
 
-    return(
-        <>
-            <div className = "nav-container">
-                <div className="nav-left">
-                    <button className="nav-button" onClick={()=> handleClick("/")}>Home</button>
-                    <button className="nav-button" onClick={handleQuizClick}>Quiz</button>
-                </div>
-                <div className="nav-right">
-                    {isAuthenticated && user ? (
-                        <>
-                            <div className="nav-user-info" onClick={() => handleClick("/profile")}>
-                                <span className="nav-user-avatar">
-                                    {user.first_name.charAt(0).toUpperCase()}
-                                </span>
-                                <span className="nav-user-name">{user.first_name}</span>
-                            </div>
-                            <button className="nav-button nav-logout" onClick={handleLogout}>Logout</button>
-                        </>
-                    ) : (
-                        <>
-                            <button className="nav-button" onClick={()=> handleClick("/login")}>Login</button>
-                            <button className="nav-button nav-register" onClick={()=> handleClick("/register")}>Register</button>
-                        </>
-                    )}
+    return (
+        <nav className="nav-container nav-centered">
+            <div className="nav-logo" onClick={() => handleClick("/")}>CodeLearn</div>
+            <div className="nav-links">
+                <button className="nav-button" onClick={() => handleClick("/")}>Home</button>
+                <button className="nav-button" onClick={handleQuizClick}>Quiz</button>
+                <button className="nav-button" onClick={() => handleClick("/prompt")}>Prompts</button>
+                <button className="nav-button" onClick={() => handleClick("/code-sandbox")}>Code Sandbox</button>
+                <button className="nav-button" onClick={() => handleClick("/resources")}>Resources</button>
+                <button className="nav-button" onClick={() => handleClick("/about")}>About</button>
+                <div className="nav-auth-buttons">
+                {isAuthenticated && user ? (
+                    <>
+                        <div className="nav-user-info" onClick={() => handleClick("/profile")}> 
+                            <span className="nav-user-avatar">
+                                {user.first_name.charAt(0).toUpperCase()}
+                            </span>
+                            <span className="nav-user-name">{user.first_name}</span>
+                        </div>
+                        <button className="nav-button nav-logout" onClick={handleLogout}>Logout</button>
+                    </>
+                ) : (
+                    <>
+                        <button className="nav-button nav-login" onClick={() => handleClick("/login")}>Login</button>
+                        <button className="nav-button nav-register" onClick={() => handleClick("/register")}>Register</button>
+                    </>
+                )}
                 </div>
             </div>
-        </>
+        </nav>
     )
 }
 
