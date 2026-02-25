@@ -28,15 +28,92 @@ This app is part of my Final Year Project:
 
 ---
 
-## How to Run (Development)
+## How to Run / Set Up
 
-### 1. Clone the Repository
-```bash
-git clone <your-repo-url>
-cd <your-project>
-```
+### 1. Backend (FastAPI)
 
-### 2. Start the FastAPI Backend
+1. Navigate to the backend directory:
+   ```
+   cd backend
+   ```
+2. Create a virtual environment:
+   ```
+   python -m venv venv
+   ```
+3. Activate the environment:
+   - Windows:
+     ```
+     venv\Scripts\activate
+     ```
+   - macOS/Linux:
+     ```
+     source venv/bin/activate
+     ```
+4. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+5. Start the FastAPI server:
+   ```
+   uvicorn main:app --reload
+   ```
+   The backend will be available at: http://127.0.0.1:8000
+
+---
+
+### 2. Frontend (React + Vite)
+
+1. Navigate to the frontend directory:
+   ```
+   cd frontend
+   ```
+2. Install dependencies:
+   ```
+   npm install
+   ```
+3. Start the development server:
+   ```
+   npm run dev
+   ```
+   The frontend will be available at: http://localhost:5173
+
+---
+
+### 3. Classifier Model (PyTorch)
+
+1. Navigate to the classifier-model directory:
+   ```
+   cd classifier-model
+   ```
+2. Create and activate a virtual environment (as above).
+3. Install dependencies:
+   ```
+   pip install -r requirements.txt
+   ```
+
+---
+
+### 4. Local LLM (Ollama, Optional)
+
+- Download and install Ollama from [ollama.com](https://ollama.com/download/windows).
+- Pull a model (e.g., llama3.1:8b):
+  ```
+  ollama pull llama3.1:8b
+  ```
+- Run the model:
+  ```
+  ollama run llama3.1:8b
+  ```
+
+---
+
+### Notes
+
+- Ensure PostgreSQL is running and accessible for backend database operations.
+- For Docker setup, see future updates in this README.
+- For CI/CD, GitHub Actions are pre-configured for linting, testing, and build validation.
+
+---
 
 ## Dataset: IBM Project CodeNet
 
@@ -66,62 +143,7 @@ CodeNet is ideal for this project because it offers:
 
 For more information, see the [IBM Project CodeNet website](https://github.com/IBM/Project_CodeNet).
 
-Create a virtual environment:
-
-```
-python -m venv venv
-```
-
-Activate it:
-
-```
-source venv/bin/activate      # macOS/Linux
-venv\Scripts\activate         # Windows
-```
-
-Install backend dependencies:
-
-```
-pip install -r requirements.txt
-```
-
-Run the backend server:
-
-```
-uvicorn main:app --reload
-```
-
-Backend will be available at:
-http://127.0.0.1:8000
-
-### 3. Start the React Frontend
-
-Navigate to the frontend folder:
-
-```
-cd frontend
-```
-
-Install dependencies:
-
-```
-npm install
-```
-
-Start the development server:
-
-```
-npm run dev
-```
-
-Frontend will be available at: http://localhost:5173
-
-- - - 
-
-### Note
-*It is important to note that this set up pipline will be prone to change especially with future Docker implementation. The above section will be updated accordingly to changes*
-
-- - - 
+---
 
 ## Project Structure
 
