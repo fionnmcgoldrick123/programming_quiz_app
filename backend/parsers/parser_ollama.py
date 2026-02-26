@@ -24,7 +24,11 @@ def ollama_parser(response: dict) -> list[QuizSchema]:
         print("Final content was:\n", content)
         return {"Error": "Failed to parse JSON"}
 
-    quiz_title = data.get("title", "Untitled Quiz")
+
+    # Accept both 'title' and 'quiz_title' keys, fallback to a generated title if missing/empty
+    quiz_title = data.get("title") or data.get("quiz_title")
+    if not quiz_title or not isinstance(quiz_title, str) or not quiz_title.strip() or quiz_title.strip().lower() == "untitled quiz":
+        quiz_title = f"Quiz ({len(data.get('questions', []))} Questions)"
 
     questions = []
 

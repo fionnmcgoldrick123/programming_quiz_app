@@ -127,21 +127,27 @@ const quizCss = `
 }
 
 /* ── main content area ── */
+/* Restyled for larger question area */
 .quiz-body {
     flex: 1;
     display: flex;
-    align-items: flex-start;
+    align-items: stretch;
     justify-content: center;
-    padding: 2.5rem 2rem 3rem;
+    padding: 0.5rem 0.5rem 1rem;
+    min-height: 0;
 }
 .quiz-card {
     width: 100%;
-    max-width: 960px;
+    max-width: 1100px;
     background: #2d2d2d;
     border-radius: 18px;
-    padding: 2.5rem 3rem;
+    padding: 4rem 4rem 3rem 4rem;
     box-shadow: 0 10px 40px rgba(0,0,0,.35);
     border: 1px solid #3d3d3d;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    min-height: 70vh;
 }
 
 /* ── question ── */
@@ -152,12 +158,17 @@ const quizCss = `
     font-family: 'Fira Code', monospace;
     font-weight: 600;
 }
+/* Larger, more prominent question */
 .quiz-card__question {
     color: #fff;
-    font-size: 1.2rem;
-    margin: 0 0 2rem;
+    font-size: 2.2rem;
+    margin: 2.5rem 0 2.5rem 0;
     font-family: 'Fira Code', monospace;
-    line-height: 1.65;
+    line-height: 1.4;
+    text-align: center;
+    font-weight: 700;
+    flex: 1 1 auto;
+    word-break: break-word;
 }
 
 /* ── options ── */
