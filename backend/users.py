@@ -59,7 +59,12 @@ async def register_user(user_data: RegisterRequest):
                 VALUES (%s, %s, %s, %s)
                 RETURNING id;
                 """,
-                (user_data.first_name, user_data.second_name, user_data.email, password_hash_value),
+                (
+                    user_data.first_name,
+                    user_data.second_name,
+                    user_data.email,
+                    password_hash_value,
+                ),
             )
             new_user_id = cur.fetchone()["id"]
             print(f"New user registered with ID: {new_user_id}")
@@ -109,8 +114,12 @@ async def login_user(login_data: LoginRequest):
             "exp": user["exp"],
             "level": user["level"],
             "xp_required": xp_for_level(user["level"]),
-            "created_at": user["created_at"].isoformat() if user["created_at"] else None,
-            "updated_at": user["updated_at"].isoformat() if user["updated_at"] else None,
+            "created_at": (
+                user["created_at"].isoformat() if user["created_at"] else None
+            ),
+            "updated_at": (
+                user["updated_at"].isoformat() if user["updated_at"] else None
+            ),
         },
     }
 
@@ -237,8 +246,16 @@ async def add_user_xp(user_id: int, xp_amount: int):
         "exp": updated_user["exp"],
         "level": updated_user["level"],
         "xp_required": xp_for_level(updated_user["level"]),
-        "created_at": updated_user["created_at"].isoformat() if updated_user["created_at"] else None,
-        "updated_at": updated_user["updated_at"].isoformat() if updated_user["updated_at"] else None,
+        "created_at": (
+            updated_user["created_at"].isoformat()
+            if updated_user["created_at"]
+            else None
+        ),
+        "updated_at": (
+            updated_user["updated_at"].isoformat()
+            if updated_user["updated_at"]
+            else None
+        ),
         "xp_gained": xp_amount,
         "leveled_up": leveled_up,
         "new_level": new_level if leveled_up else None,

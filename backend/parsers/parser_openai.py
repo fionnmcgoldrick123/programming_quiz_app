@@ -24,10 +24,14 @@ def openai_parser(response: dict) -> QuizSchema:
 
     print("Parsed Quiz Data:", data)
 
-
     # Accept both 'quiz_title' and 'title' keys, fallback to a generated title if missing/empty
     quiz_title = data.get("quiz_title") or data.get("title")
-    if not quiz_title or not isinstance(quiz_title, str) or not quiz_title.strip() or quiz_title.strip().lower() == "untitled quiz":
+    if (
+        not quiz_title
+        or not isinstance(quiz_title, str)
+        or not quiz_title.strip()
+        or quiz_title.strip().lower() == "untitled quiz"
+    ):
         quiz_title = f"Quiz ({len(data.get('questions', []))} Questions)"
 
     questions = []

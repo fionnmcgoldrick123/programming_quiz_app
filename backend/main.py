@@ -21,7 +21,11 @@ from pydantic_models import (
     AddXpRequest,
     RunCodeRequest,
     SubmitCodeRequest,
+    CodingHintRequest,
+    McqHintRequest,
 )
+
+from graphcodebert import generate_coding_hints
 
 # Import service modules
 from users import register_user, login_user, get_user_profile, add_user_xp
@@ -190,3 +194,18 @@ async def submit_code_endpoint(request: SubmitCodeRequest):
         dict: Test results with pass/fail status for each test case.
     """
     return await submit_code(request)
+
+
+# --- GraphCodeBert Endpoints ---
+
+@app.post("/hint/coding")
+async def coding_hint(request: CodingHintRequest):
+    hints = await generate_coding_hints(
+        request.question,
+        request.student_code,
+        request.starter_code,
+        request.test_cases,
+        request.language,
+        current_model
+    )
+    return {"hints": hints}

@@ -2,6 +2,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import Navbar from "./Navbar";
 import { useAuth } from "../utils/AuthContext";
+import { useHint } from "../hooks/useHint"; 
 
 const XP_PER_CORRECT = 10;
 
@@ -127,7 +128,6 @@ const quizCss = `
 }
 
 /* ── main content area ── */
-/* Restyled for larger question area */
 .quiz-body {
     flex: 1;
     display: flex;
@@ -158,7 +158,6 @@ const quizCss = `
     font-family: 'Fira Code', monospace;
     font-weight: 600;
 }
-/* Larger, more prominent question */
 .quiz-card__question {
     color: #fff;
     font-size: 2.2rem;
@@ -169,6 +168,48 @@ const quizCss = `
     font-weight: 700;
     flex: 1 1 auto;
     word-break: break-word;
+}
+
+/* ── hint button & panel ── */       /* ← ADDED */
+.quiz-hint-row {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 0.75rem;
+}
+.quiz-hint-btn {
+    background: transparent;
+    border: 1px solid #4d4d4d;
+    border-radius: 8px;
+    color: #aaa;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.82rem;
+    padding: 5px 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all .2s ease;
+}
+.quiz-hint-btn:hover {
+    border-color: #ff9500;
+    color: #ff9500;
+}
+.quiz-hint-panel {
+    background: rgba(255,149,0,.07);
+    border: 1px solid rgba(255,149,0,.25);
+    border-radius: 10px;
+    padding: 0.85rem 1.1rem;
+    margin-bottom: 1rem;
+}
+.quiz-hint-panel ul {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+.quiz-hint-panel li {
+    color: #ffb347;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.88rem;
+    line-height: 1.6;
 }
 
 /* ── options ── */
@@ -372,9 +413,10 @@ function QuizPage() {
     const navigate = useNavigate();
     const { token, updateUser, user } = useAuth();
 
+    const { hints, loading: hintLoading, fetchMcqHint, clearHints } = useHint();
+
     const QUIZ_SESSION_KEY = user ? quizSessionKey(user.id) : null;
 
-    // Parse saved session once for use in state initializers
     const savedSession = (() => {
         try {
             if (!QUIZ_SESSION_KEY) return null;
@@ -383,7 +425,6 @@ function QuizPage() {
         } catch { return null; }
     })();
 
-    // Fresh quiz = location.state has quiz data with a session ID different from saved
     const isFreshQuiz = Boolean(
         location.state?.quizData?.length &&
         (!savedSession || savedSession.sessionId !== location.state.sessionId)
@@ -423,7 +464,6 @@ function QuizPage() {
 
     const [levelUpInfo, setLevelUpInfo] = useState<{ show: boolean; newLevel: number | null }>({ show: false, newLevel: null });
 
-    // Persist quiz session to sessionStorage whenever progress changes
     useEffect(() => {
         if (quiz.length && QUIZ_SESSION_KEY) {
             sessionStorage.setItem(QUIZ_SESSION_KEY, JSON.stringify({
@@ -436,9 +476,15 @@ function QuizPage() {
         }
     }, [sessionId, quiz, currentIndex, finished, totalXpEarned, QUIZ_SESSION_KEY]);
 
+    useEffect(() => {
+        setAnswered(false);
+        setSelectedAnswer(null);
+        setCorrectAnswerIndex(null);
+        clearHints();
+    }, [currentIndex]);
+
     async function addXpToUser() {
         if (!token) return;
-        
         try {
             const response = await fetch('http://127.0.0.1:8000/add-xp', {
                 method: 'POST',
@@ -451,14 +497,12 @@ function QuizPage() {
 
             if (response.ok) {
                 const data = await response.json();
-                // Update user in auth context (strip extra fields that aren't part of User type)
                 // eslint-disable-next-line @typescript-eslint/no-unused-vars
                 const { xp_gained, leveled_up, new_level, ...updatedUser } = data;
                 updateUser(updatedUser);
 
                 if (leveled_up && new_level) {
                     setLevelUpInfo({ show: true, newLevel: new_level });
-                    // Auto-hide after 3 seconds
                     setTimeout(() => setLevelUpInfo({ show: false, newLevel: null }), 3000);
                 }
             }
@@ -474,13 +518,6 @@ function QuizPage() {
 
     const currentQ = quiz[currentIndex];
     const progress = quiz.length > 0 ? ((currentIndex) / quiz.length) * 100 : 0;
-
-    // Reset answered state when question changes
-    useEffect(() => {
-        setAnswered(false);
-        setSelectedAnswer(null);
-        setCorrectAnswerIndex(null);
-    }, [currentIndex]);
 
     if (!quiz.length) {
         return (
@@ -502,16 +539,12 @@ function QuizPage() {
     }
 
     function handleAnswer(_option: string, index: number) {
-        // Prevent multiple attempts on same question
         if (answered) return;
 
         const letterFromIndex = ["A", "B", "C", "D"][index];
         const isCorrect = letterFromIndex === currentQ.correct_answer;
-        
-        // Find correct answer index
         const correctIdx = ["A", "B", "C", "D"].indexOf(currentQ.correct_answer);
-        
-        // Lock the question immediately
+
         setAnswered(true);
         setSelectedAnswer(index);
         setCorrectAnswerIndex(correctIdx);
@@ -525,7 +558,6 @@ function QuizPage() {
             setFeedbackMessage(`Incorrect! The correct answer was ${currentQ.correct_answer}.`);
         }
 
-        // Auto-advance to next question after delay
         setTimeout(() => {
             setFeedbackMessage(null);
             setShowXpAnimation(false);
@@ -537,10 +569,8 @@ function QuizPage() {
         }, 2000);
     }
 
-    /* ── Header bar (shared by active quiz & completion screen) ── */
     const headerBar = (
         <div className="quiz-header">
-            {/* Left: XP */}
             <div className="quiz-header__xp">
                 <span className="quiz-header__xp-icon">⚡</span>
                 {user && (
@@ -559,7 +589,6 @@ function QuizPage() {
                 )}
             </div>
 
-            {/* Center: Progress */}
             {!finished && (
                 <div className="quiz-header__progress">
                     <span className="quiz-header__progress-label">
@@ -574,14 +603,12 @@ function QuizPage() {
                 </div>
             )}
 
-            {/* Right: Quit */}
             <button className="quiz-header__quit" onClick={handleQuitQuiz}>
                 ✕ Quit Quiz
             </button>
         </div>
     );
 
-    /* ── Completion screen ── */
     if (finished) {
         return (
             <>
@@ -650,11 +677,39 @@ function QuizPage() {
                             </div>
                         )}
 
+                        {/* ── Hint button & panel ── */}
+                        {!answered && (
+                            <div className="quiz-hint-row">
+                                <button
+                                    className="quiz-hint-btn"
+                                    onClick={() =>
+                                        hints.length
+                                            ? clearHints()
+                                            : fetchMcqHint(currentQ.question, currentQ.options)
+                                    }
+                                    title={hints.length ? "Hide hints" : "Get a hint"}
+                                >
+                                    {hintLoading ? "..." : hints.length ? "💡 Hide Hints" : "💡 Hint"}
+                                </button>
+                            </div>
+                        )}
+
+                        {hints.length > 0 && !answered && (
+                            <div className="quiz-hint-panel">
+                                <ul>
+                                    {hints.map((hint, i) => (
+                                        <li key={i}>{hint}</li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
+                        {/* ── END hint ── */}
+
                         {/* Options */}
                         <div className="quiz-options">
                             {currentQ.options.map((opt: string, i: number) => {
                                 let optionClass = "quiz-option";
-                                
+
                                 if (answered) {
                                     optionClass += " quiz-option--disabled";
                                     if (i === correctAnswerIndex) {
@@ -663,7 +718,7 @@ function QuizPage() {
                                         optionClass += " quiz-option--incorrect";
                                     }
                                 }
-                                
+
                                 return (
                                     <button
                                         key={i}

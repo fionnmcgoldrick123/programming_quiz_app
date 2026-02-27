@@ -64,3 +64,16 @@ class SubmitCodeRequest(BaseModel):
     code: str
     language: str
     test_cases: List[str]
+
+
+class McqHintRequest(BaseModel):
+    question: str
+    options: List[str]
+
+
+class CodingHintRequest(BaseModel):
+    question: str
+    student_code: str
+    starter_code: str
+    test_cases: List[str]
+    language: str = "python"

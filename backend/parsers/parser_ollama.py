@@ -24,10 +24,14 @@ def ollama_parser(response: dict) -> list[QuizSchema]:
         print("Final content was:\n", content)
         return {"Error": "Failed to parse JSON"}
 
-
     # Accept both 'title' and 'quiz_title' keys, fallback to a generated title if missing/empty
     quiz_title = data.get("title") or data.get("quiz_title")
-    if not quiz_title or not isinstance(quiz_title, str) or not quiz_title.strip() or quiz_title.strip().lower() == "untitled quiz":
+    if (
+        not quiz_title
+        or not isinstance(quiz_title, str)
+        or not quiz_title.strip()
+        or quiz_title.strip().lower() == "untitled quiz"
+    ):
         quiz_title = f"Quiz ({len(data.get('questions', []))} Questions)"
 
     questions = []
@@ -36,10 +40,17 @@ def ollama_parser(response: dict) -> list[QuizSchema]:
         raw_opts = q.get("options", [])
 
         # Clean options by removing prefixes like "A: ", "B: ", etc.
-        clean_options = [opt.split(": ", 1)[1] if ": " in opt else opt for opt in raw_opts]
+        clean_options = [
+            opt.split(": ", 1)[1] if ": " in opt else opt for opt in raw_opts
+        ]
 
         questions.append(
-            QuizSchema(title=quiz_title, question=q["question"], options=clean_options, correct_answer=q["answer"])
+            QuizSchema(
+                title=quiz_title,
+                question=q["question"],
+                options=clean_options,
+                correct_answer=q["answer"],
+            )
         )
 
     return questions

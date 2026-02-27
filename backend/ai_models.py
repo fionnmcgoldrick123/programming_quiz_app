@@ -51,13 +51,23 @@ async def openai_request(prompt: PromptRequest):
 
     url = "https://api.openai.com/v1/chat/completions"
 
-    headers = {"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"}
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
 
-    system_content = "you are a coding challenge generation assistant" if is_coding else "you are a quiz generation assistant"
+    system_content = (
+        "you are a coding challenge generation assistant"
+        if is_coding
+        else "you are a quiz generation assistant"
+    )
 
     payload = {
         "model": "gpt-4o-mini",
-        "messages": [{"role": "system", "content": system_content}, {"role": "user", "content": prompt_request}],
+        "messages": [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": prompt_request},
+        ],
     }
 
     timeout = httpx.Timeout(120.0, connect=10.0)

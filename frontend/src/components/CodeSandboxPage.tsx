@@ -5,6 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Navbar from "./Navbar";
 import { useAuth } from "../utils/AuthContext";
+import { useHint } from "../hooks/useHint";
 import '../css-files/CodeSandboxPage.css';
 
 interface CodeQuestion {
@@ -29,6 +30,8 @@ function CodeSandboxPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { user } = useAuth();
+
+    const { hints, loading: hintLoading, fetchCodingHint, clearHints } = useHint();
 
     const CODE_SESSION_KEY = user ? codeSessionKey(user.id) : null;
 
@@ -111,6 +114,10 @@ function CodeSandboxPage() {
         }
     }, [sessionId, questions, language, currentIndex, code, finished, CODE_SESSION_KEY]);
 
+    useEffect(() => {
+        clearHints();
+    }, [currentIndex]);
+
     const languageMap: { [key: string]: string } = {
         "python": "python",
         "javascript": "javascript",
@@ -152,7 +159,7 @@ function CodeSandboxPage() {
                 <div className="sandbox-content">
                     <div className="sandbox-empty-state">
                         <p className="sandbox-empty-text">No coding challenge data found. Go back and generate a quiz first.</p>
-                        <button 
+                        <button
                             className="sandbox-back-button"
                             onClick={handleQuitQuiz}
                         >
@@ -177,7 +184,7 @@ function CodeSandboxPage() {
     async function handleRunCode() {
         setIsRunning(true);
         setOutput("Running code...");
-        
+
         try {
             const response = await fetch("http://127.0.0.1:8000/run-code", {
                 method: "POST",
@@ -189,9 +196,9 @@ function CodeSandboxPage() {
                     language: language
                 })
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 setOutput(`✓ Execution successful\n\nOutput:\n${result.output || '(no output)'}`);
             } else {
@@ -207,7 +214,7 @@ function CodeSandboxPage() {
     async function handleSubmit() {
         setIsSubmitting(true);
         setOutput("Running tests...");
-        
+
         try {
             const response = await fetch("http://127.0.0.1:8000/submit-code", {
                 method: "POST",
@@ -220,9 +227,9 @@ function CodeSandboxPage() {
                     test_cases: currentQ.test_cases
                 })
             });
-            
+
             const result = await response.json();
-            
+
             if (result.success) {
                 let outputText = "✓ All tests passed!\n\n";
                 result.test_results.forEach((test: TestResult) => {
@@ -232,7 +239,7 @@ function CodeSandboxPage() {
                     outputText += `  Got: ${JSON.stringify(test.actual)}\n\n`;
                 });
                 setOutput(outputText);
-                
+
                 // Move to next question after a short delay
                 setTimeout(() => {
                     handleNextQuestion();
@@ -270,7 +277,7 @@ function CodeSandboxPage() {
                         <p className="sandbox-complete-text">
                             Great job! You've completed all the coding challenges.
                         </p>
-                        <button 
+                        <button
                             className="sandbox-back-button"
                             onClick={handleQuitQuiz}
                         >
@@ -294,7 +301,7 @@ function CodeSandboxPage() {
                             ✕ Exit Quiz
                         </button>
                     </div>
-                    
+
                     <div className="sandbox-editor-wrapper">
                         <Editor
                             height="60vh"
@@ -332,14 +339,14 @@ function CodeSandboxPage() {
                     </div>
 
                     <div className="sandbox-button-group">
-                        <button 
+                        <button
                             className="sandbox-run-button"
                             onClick={handleRunCode}
                             disabled={isRunning || isSubmitting}
                         >
                             {isRunning ? "Running..." : "Run Code"}
                         </button>
-                        <button 
+                        <button
                             className="sandbox-submit-button"
                             onClick={handleSubmit}
                             disabled={isRunning || isSubmitting}
@@ -370,7 +377,7 @@ function CodeSandboxPage() {
                             Question {currentIndex + 1} of {questions.length}
                         </p>
                         <div className="sandbox-progress-bar">
-                            <div 
+                            <div
                                 className="sandbox-progress-fill"
                                 style={{ width: `${progress}%` }}
                             />
@@ -406,6 +413,54 @@ function CodeSandboxPage() {
                                 </ul>
                             </div>
                         )}
+
+                        {/* GraphCodeBERT hint button */}
+                        <div style={{ marginTop: "1.25rem" }}>
+                            <button
+                                onClick={() =>
+                                    hints.length
+                                        ? clearHints()
+                                        : fetchCodingHint(
+                                            currentQ.question,
+                                            code,
+                                            currentQ.starter_code,  // ← the original stub
+                                            currentQ.test_cases,     // ← the test cases
+                                            language
+                                        )
+                                }
+                                disabled={hintLoading}
+                                style={{
+                                    background: "transparent",
+                                    border: "1px solid #4d4d4d",
+                                    borderRadius: "8px",
+                                    color: hints.length ? "#ff9500" : "#aaa",
+                                    fontSize: "0.82rem",
+                                    padding: "5px 14px",
+                                    cursor: "pointer",
+                                    transition: "all .2s ease",
+                                    marginBottom: "0.75rem",
+                                }}
+                            >
+                                {hintLoading ? "Thinking..." : hints.length ? "💡 Hide AI Hint" : "💡 Get AI Hint"}
+                            </button>
+
+                            {hints.length > 0 && (
+                                <div style={{
+                                    background: "rgba(255,149,0,0.07)",
+                                    border: "1px solid rgba(255,149,0,0.25)",
+                                    borderRadius: "8px",
+                                    padding: "0.75rem 1rem",
+                                }}>
+                                    <ul style={{ margin: 0, paddingLeft: "1.2rem" }}>
+                                        {hints.map((hint, idx) => (
+                                            <li key={idx} style={{ color: "#ffb347", fontSize: "0.88rem", lineHeight: "1.6" }}>
+                                                {hint}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
             </div>
