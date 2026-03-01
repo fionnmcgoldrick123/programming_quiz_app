@@ -56,13 +56,6 @@ try:
 except ImportError:
     HAS_XGBOOST = False
 
-try:
-    from imblearn.over_sampling import SMOTE
-    HAS_SMOTE = True
-except ImportError:
-    HAS_SMOTE = False
-    print("imbalanced-learn not installed — SMOTE disabled. Run: pip install imbalanced-learn")
-
 # ============================================================
 # Config — reads CODENET_PATH from .env if available
 # ============================================================
@@ -557,28 +550,6 @@ def main() -> None:
     print(f"  Val   : {len(X_val)}")
     print(f"  Test  : {len(X_test)}")
 
-    # ------------------------------------------------------------------ #
-    # SMOTE — oversample minority classes on training set only            #
-    # ------------------------------------------------------------------ #
-    if HAS_SMOTE:
-        print("\n  Applying SMOTE to training set ...")
-        pre_smote = _build_preprocessor()
-        X_train_t = pre_smote.fit_transform(X_train, y_train)
-        counts = pd.Series(y_train).value_counts()
-        k = min(5, int(counts.min()) - 1)
-        if k >= 1:
-            sm = SMOTE(random_state=42, k_neighbors=k)
-            X_resampled, y_resampled = sm.fit_resample(X_train_t, y_train)
-            _smote_pre = pre_smote    # already fitted preprocessor
-            _smote_X   = X_resampled  # resampled transformed features
-            _smote_y   = y_resampled  # resampled labels
-            print(f"  SMOTE: training set expanded to {len(y_resampled)} samples")
-        else:
-            print("  SMOTE skipped — smallest class too small for k_neighbors")
-            _smote_pre = _smote_X = _smote_y = None
-    else:
-        _smote_pre = _smote_X = _smote_y = None
-    # ------------------------------------------------------------------ #
     print("\n" + "=" * 60)
     print("STEP 4: Training and tuning models")
     print("=" * 60)
