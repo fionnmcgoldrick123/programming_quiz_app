@@ -49,3 +49,4 @@ htmlcov/
 *.pt
 *.safetensors
 models/
+

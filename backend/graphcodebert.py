@@ -93,66 +93,7 @@ def analyse_student_code(
         "stage": stage,
     }
 
-
-# MCQ Hints (uses LLM directly)
-
-async def generate_mcq_hints(
-    question: str,
-    options: list[str],
-    model: str = "openai"
-) -> list[str]:
-    """
-    Generate hints for an MCQ question using the AI model.
-    Asks the model for hints that guide without revealing the answer.
-    """
-    options_text = "\n".join([f"{['A','B','C','D'][i]}: {opt}" for i, opt in enumerate(options)])
-
-    prompt = f"""A student is answering this multiple choice question:
-
-Question: {question}
-
-Options:
-{options_text}
-
-Give 2 short hints that help the student think in the right direction WITHOUT revealing or implying the correct answer.
-Do not mention any option by letter or say which is correct.
-Each hint should be one sentence. Return only the hints as a JSON array of strings, nothing else.
-Example: ["hint one", "hint two"]"""
-
-    if model == "openai":
-        from config import OPENAI_API_KEY
-        async with httpx.AsyncClient(timeout=httpx.Timeout(30.0)) as client:
-            response = await client.post(
-                "https://api.openai.com/v1/chat/completions",
-                headers={"Authorization": f"Bearer {OPENAI_API_KEY}", "Content-Type": "application/json"},
-                json={
-                    "model": "gpt-4o-mini",
-                    "messages": [
-                        {"role": "system", "content": "You are a helpful quiz tutor. Never reveal correct answers."},
-                        {"role": "user", "content": prompt}
-                    ]
-                }
-            )
-        content = response.json()["choices"][0]["message"]["content"]
-    else:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0)) as client:
-            response = await client.post(
-                "http://localhost:11434/api/generate",
-                headers={"Content-Type": "application/json"},
-                json={"model": "llama3.1:8b", "prompt": prompt, "stream": False}
-            )
-        content = response.json()["response"]
-
-    match = re.search(r'\[.*?\]', content, re.DOTALL)
-    if match:
-        return json.loads(match.group())
-    return [
-        "Think carefully about what the question is specifically asking.",
-        "Consider the core concept the question is testing."
-    ]
-
-
-# Coding Hints (GraphCodeBERT analysis → LLM hint generation)
+# Coding Hints (GraphCodeBERT analysis -> LLM hint generation)
 
 async def generate_coding_hints(
     question: str,

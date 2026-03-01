@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import Navbar from "./Navbar";
 import { useAuth } from "../utils/AuthContext";
 import { useHint } from "../hooks/useHint"; 
+// import '../css-files/Quiz.css'
 
 const XP_PER_CORRECT = 10;
 
