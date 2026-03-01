@@ -9,12 +9,6 @@ Data sources (all from CODENET_PATH):
                                  -> acceptance_rate, avg_cpu_time, avg_memory, avg_code_size
   - problem_descriptions/*.html — problem statement text -> TF-IDF + keyword features
 
-Label strategy:
-  Derived from acceptance_rate (no explicit difficulty field in this dataset):
-    top    33% acceptance -> "easy"
-    middle 33% acceptance -> "medium"
-    bottom 33% acceptance -> "hard"
-
 Models trained:
   Random Forest, Gradient Boosting, XGBoost (if available),
   Linear SVM, Logistic Regression, kNN
@@ -40,7 +34,12 @@ from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier
+from sklearn.ensemble import (
+    RandomForestClassifier,
+    GradientBoostingClassifier,
+    HistGradientBoostingClassifier,
+)
+from sklearn.inspection import permutation_importance
 from sklearn.svm import SVC
 from sklearn.linear_model import LogisticRegression
 from sklearn.neighbors import KNeighborsClassifier
@@ -56,6 +55,13 @@ try:
     HAS_XGBOOST = True
 except ImportError:
     HAS_XGBOOST = False
+
+try:
+    from imblearn.over_sampling import SMOTE
+    HAS_SMOTE = True
+except ImportError:
+    HAS_SMOTE = False
+    print("imbalanced-learn not installed — SMOTE disabled. Run: pip install imbalanced-learn")
 
 # ============================================================
 # Config — reads CODENET_PATH from .env if available
@@ -341,13 +347,33 @@ NUMERIC_FEATURES = [
     "has_string_keywords", "has_math_keywords", "has_greedy_keywords",
     "has_stack_keywords", "has_complexity_keywords",
     "num_large_numbers", "num_code_tokens",
+    # Interaction features
+    "desc_words_x_large_nums",  # long problem + big constraints = harder
+    "cpu_time_x_code_size",     # slow + verbose = harder
 ]
 TEXT_FEATURE = "description_text"
+
+
+def _add_interaction_features(df: pd.DataFrame) -> pd.DataFrame:
+    """Add derived interaction columns in-place."""
+    df = df.copy()
+    df["desc_words_x_large_nums"] = df["desc_word_count"] * df["num_large_numbers"]
+    df["cpu_time_x_code_size"]    = df["avg_cpu_time"].fillna(0) * df["avg_code_size"].fillna(0)
+    return df
 
 
 def _squeeze_array(x):
     """Squeeze 2-D single-column array to 1-D for TfidfVectorizer."""
     return x.squeeze() if hasattr(x, "squeeze") else x
+
+
+def _to_dense(x):
+    """Convert a sparse matrix to a dense numpy array (required by some estimators)."""
+    return x.toarray() if hasattr(x, "toarray") else x
+
+
+# Estimator types that require dense (non-sparse) input
+_NEEDS_DENSE = (HistGradientBoostingClassifier, GradientBoostingClassifier)
 
 
 def _build_preprocessor() -> ColumnTransformer:
@@ -391,6 +417,15 @@ def _define_models() -> dict:
             {
                 "classifier__n_estimators": [100, 200],
                 "classifier__max_depth":    [10, 20, None],
+            },
+        ),
+        # HistGradientBoosting: faster, handles NaNs natively, better on large data
+        "HistGradientBoosting": (
+            HistGradientBoostingClassifier(random_state=42),
+            {
+                "classifier__max_iter":      [100, 200],
+                "classifier__learning_rate": [0.05, 0.1],
+                "classifier__max_depth":     [3, 5, None],
             },
         ),
         "Gradient Boosting": (
@@ -492,11 +527,14 @@ def main() -> None:
     print("Saved: difficulty_distribution.png")
 
     # ------------------------------------------------------------------ #
-    # STEP 3 — Train / Val / Test split  (60 / 20 / 20)                  #
+    # STEP 3 — Feature engineering + Train / Val / Test split (60/20/20) #
     # ------------------------------------------------------------------ #
     print("\n" + "=" * 60)
-    print("STEP 3: Train / Validation / Test split (60 / 20 / 20)")
+    print("STEP 3: Feature engineering + Train / Validation / Test split (60 / 20 / 20)")
     print("=" * 60)
+
+    # Add interaction features before any split so all sets get them
+    df = _add_interaction_features(df)
 
     X = df[NUMERIC_FEATURES + [TEXT_FEATURE]].copy()
     X[TEXT_FEATURE] = X[TEXT_FEATURE].fillna("")
@@ -520,7 +558,26 @@ def main() -> None:
     print(f"  Test  : {len(X_test)}")
 
     # ------------------------------------------------------------------ #
-    # STEP 4 — Train and tune every model                                 #
+    # SMOTE — oversample minority classes on training set only            #
+    # ------------------------------------------------------------------ #
+    if HAS_SMOTE:
+        print("\n  Applying SMOTE to training set ...")
+        pre_smote = _build_preprocessor()
+        X_train_t = pre_smote.fit_transform(X_train, y_train)
+        counts = pd.Series(y_train).value_counts()
+        k = min(5, int(counts.min()) - 1)
+        if k >= 1:
+            sm = SMOTE(random_state=42, k_neighbors=k)
+            X_resampled, y_resampled = sm.fit_resample(X_train_t, y_train)
+            _smote_pre = pre_smote    # already fitted preprocessor
+            _smote_X   = X_resampled  # resampled transformed features
+            _smote_y   = y_resampled  # resampled labels
+            print(f"  SMOTE: training set expanded to {len(y_resampled)} samples")
+        else:
+            print("  SMOTE skipped — smallest class too small for k_neighbors")
+            _smote_pre = _smote_X = _smote_y = None
+    else:
+        _smote_pre = _smote_X = _smote_y = None
     # ------------------------------------------------------------------ #
     print("\n" + "=" * 60)
     print("STEP 4: Training and tuning models")
@@ -535,10 +592,15 @@ def main() -> None:
     for name, (estimator, param_grid) in models.items():
         print(f"\n--- {name} ---")
 
-        pipe = Pipeline([
-            ("preprocessor", preprocessor),
-            ("classifier",   estimator),
-        ])
+        # HistGradientBoosting and GradientBoosting require dense input;
+        # insert a densify step between the (sparse) preprocessor and classifier.
+        from sklearn.preprocessing import FunctionTransformer
+        pipe_steps = [("preprocessor", preprocessor)]
+        if isinstance(estimator, _NEEDS_DENSE):
+            pipe_steps.append(("densify", FunctionTransformer(_to_dense)))
+        pipe_steps.append(("classifier", estimator))
+
+        pipe = Pipeline(pipe_steps)
 
         # Quick default fit to check for over/underfitting
         pipe.fit(X_train, y_train)
@@ -546,15 +608,15 @@ def main() -> None:
         val_acc_default = pipe.score(X_val, y_val)
         print(f"  Default  →  train: {train_acc:.4f}  |  val: {val_acc_default:.4f}")
 
-        # GridSearchCV with 5-fold CV on the training set
+        # GridSearchCV with 5-fold CV — f1_macro balances precision/recall across all 3 classes
         grid = GridSearchCV(
-            pipe, param_grid, cv=5, n_jobs=-1, scoring="accuracy", verbose=0
+            pipe, param_grid, cv=5, n_jobs=-1, scoring="f1_macro", verbose=0
         )
         grid.fit(X_train, y_train)
 
         tuned_val_acc = grid.score(X_val, y_val)
         print(f"  Best params : {grid.best_params_}")
-        print(f"  Best CV     : {grid.best_score_:.4f}  |  Tuned val: {tuned_val_acc:.4f}")
+        print(f"  Best CV f1  : {grid.best_score_:.4f}  |  Tuned val acc: {tuned_val_acc:.4f}")
 
         val_scores[name] = tuned_val_acc
         best_pipelines[name] = grid.best_estimator_
@@ -631,9 +693,9 @@ def main() -> None:
     plt.show()
     print("Saved: confusion_matrix.png")
 
-    # Feature importance when Random Forest wins
-    if "Forest" in best_name:
-        _print_feature_importance(final_model)
+    # Feature importance for tree-based winners
+    if any(kw in best_name for kw in ("Forest", "Boosting")):
+        _print_feature_importance(final_model, X_val, y_val)
 
     # ------------------------------------------------------------------ #
     # Save model                                                          #
@@ -642,13 +704,20 @@ def main() -> None:
     print(f"\nModel saved → {MODEL_SAVE_PATH}")
 
 
-def _print_feature_importance(pipeline: Pipeline, top_n: int = 20) -> None:
-    """Print top feature importances for tree-based models."""
+def _print_feature_importance(pipeline: Pipeline, X_val: pd.DataFrame, y_val: pd.Series, top_n: int = 20) -> None:
+    """
+    Print feature importances using permutation importance (more reliable than
+    tree built-in importances, especially for high-cardinality TF-IDF columns).
+    """
+    print(f"\nTop {top_n} Features (permutation importance on validation set):")
     try:
-        clf          = pipeline.named_steps["classifier"]
+        result = permutation_importance(
+            pipeline, X_val, y_val,
+            n_repeats=10, random_state=42, n_jobs=-1,
+            scoring="f1_macro",
+        )
         preprocessor = pipeline.named_steps["preprocessor"]
         text_step    = preprocessor.named_transformers_["text"].named_steps["tfidf"]
-        # FeatureUnion: collect names from each sub-transformer
         tfidf_names: list[str] = []
         if hasattr(text_step, "transformer_list"):
             for _, sub in text_step.transformer_list:
@@ -656,15 +725,17 @@ def _print_feature_importance(pipeline: Pipeline, top_n: int = 20) -> None:
         else:
             tfidf_names = text_step.get_feature_names_out().tolist()
         feature_names = NUMERIC_FEATURES + tfidf_names
-        importances   = clf.feature_importances_
 
-        top_idx = np.argsort(importances)[::-1][:top_n]
-        print(f"\nTop {top_n} Feature Importances:")
+        top_idx = np.argsort(result.importances_mean)[::-1][:top_n]
         for rank, idx in enumerate(top_idx, 1):
             if idx < len(feature_names):
-                print(f"  {rank:2d}. {feature_names[idx]:40s} {importances[idx]:.4f}")
+                print(
+                    f"  {rank:2d}. {feature_names[idx]:40s}"
+                    f"  mean={result.importances_mean[idx]:.4f}"
+                    f"  std={result.importances_std[idx]:.4f}"
+                )
     except Exception as exc:
-        print(f"  (Could not extract importances: {exc})")
+        print(f"  (Could not compute permutation importance: {exc})")
 
 
 # ============================================================
@@ -723,6 +794,9 @@ def predict_difficulty(
         "has_complexity_keywords":  desc_feats["has_complexity_keywords"],
         "num_large_numbers":        desc_feats["num_large_numbers"],
         "num_code_tokens":          desc_feats["num_code_tokens"],
+        # Interaction features
+        "desc_words_x_large_nums":  desc_feats["desc_word_count"] * desc_feats["num_large_numbers"],
+        "cpu_time_x_code_size":     (avg_cpu_time or 0) * (avg_code_size or 0),
         "description_text":         desc_feats["description_text"],
     }])
 
