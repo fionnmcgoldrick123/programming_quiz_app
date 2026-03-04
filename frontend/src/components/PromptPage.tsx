@@ -1,6 +1,6 @@
 import '../css-files/PromptPage.css'  
 import Navbar from "./Navbar";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../utils/AuthContext";
 import mcqIcon from "../assets/imgs/test.png";
@@ -37,6 +37,7 @@ function PromptPage(){
     const [loading, setLoading] = useState(false);
     const [loadingTip, setLoadingTip] = useState(0);
     const navigate = useNavigate();
+    const abortControllerRef = useRef<AbortController | null>(null);
 
     useEffect(() => {
         if (!authLoading && !isAuthenticated) {
@@ -76,6 +77,15 @@ function PromptPage(){
         return null;
     }
 
+    function handleCancel() {
+        if (abortControllerRef.current) {
+            abortControllerRef.current.abort();
+            abortControllerRef.current = null;
+        }
+        setLoading(false);
+        setError("");
+    }
+
     async function handleModelChange(model: string) {
         setSelectedModel(model);
         try {
@@ -113,6 +123,8 @@ function PromptPage(){
         }
 
         // Send prompt to backend for both MCQ and coding quizzes
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
         setLoading(true);
         try {
             const response = await fetch('http://127.0.0.1:8000/prompt', {
@@ -123,8 +135,11 @@ function PromptPage(){
                     quiz_type: quizType,
                     language: selectedLanguage,
                     num_questions: numQuestions
-                })
+                }),
+                signal: controller.signal
             });
+
+            if (controller.signal.aborted) return;
 
             const quiz = await response.json();
             console.log("Quiz from backend:", quiz);
@@ -134,10 +149,15 @@ function PromptPage(){
             } else {
                 navigate('/quiz', { state: { quizData: quiz, sessionId: Date.now() } });
             }
-        } catch (error) {
-            console.error("Error submitting prompt:", error);
+        } catch (err: unknown) {
+            if (err instanceof Error && err.name === 'AbortError') {
+                // User cancelled — clean exit, no error message
+                return;
+            }
+            console.error("Error submitting prompt:", err);
             setError("Failed to generate quiz. Please try again.");
         } finally {
+            abortControllerRef.current = null;
             setLoading(false);
         }
     }
@@ -178,6 +198,15 @@ function PromptPage(){
                     <p className="loading-tip" key={loadingTip}>{tips[loadingTip]}</p>
 
                     <p className="loading-subtext">This may take up to a minute depending on the model</p>
+
+                    <button
+                        className="loading-cancel-btn"
+                        onClick={handleCancel}
+                        type="button"
+                        aria-label="Cancel quiz generation"
+                    >
+                        Cancel
+                    </button>
                 </div>
             </div>
         )}
