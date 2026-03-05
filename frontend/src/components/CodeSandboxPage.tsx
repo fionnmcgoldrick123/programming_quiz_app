@@ -5,7 +5,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import Navbar from "./Navbar";
 import { useAuth } from "../utils/AuthContext";
-import { useHint } from "../hooks/useHint";
+
 import '../css-files/CodeSandboxPage.css';
 
 interface CodeQuestion {
@@ -46,7 +46,6 @@ function CodeSandboxPage() {
     const navigate = useNavigate();
     const { user } = useAuth();
 
-    const { hints, loading: hintLoading, fetchCodingHint, clearHints } = useHint();
 
     const CODE_SESSION_KEY = user ? codeSessionKey(user.id) : null;
 
@@ -128,10 +127,6 @@ function CodeSandboxPage() {
             }));
         }
     }, [sessionId, questions, language, currentIndex, code, finished, CODE_SESSION_KEY]);
-
-    useEffect(() => {
-        clearHints();
-    }, [currentIndex]);
 
     const languageMap: { [key: string]: string } = {
         "python": "python",
@@ -485,53 +480,7 @@ function CodeSandboxPage() {
                             </div>
                         )}
 
-                        {/* GraphCodeBERT hint button */}
-                        <div style={{ marginTop: "1.25rem" }}>
-                            <button
-                                onClick={() =>
-                                    hints.length
-                                        ? clearHints()
-                                        : fetchCodingHint(
-                                            currentQ.question,
-                                            code,
-                                            currentQ.starter_code,  // ← the original stub
-                                            currentQ.test_cases,     // ← the test cases
-                                            language
-                                        )
-                                }
-                                disabled={hintLoading}
-                                style={{
-                                    background: "transparent",
-                                    border: "1px solid #4d4d4d",
-                                    borderRadius: "8px",
-                                    color: hints.length ? "#ff9500" : "#aaa",
-                                    fontSize: "0.82rem",
-                                    padding: "5px 14px",
-                                    cursor: "pointer",
-                                    transition: "all .2s ease",
-                                    marginBottom: "0.75rem",
-                                }}
-                            >
-                                {hintLoading ? "Thinking..." : hints.length ? "💡 Hide AI Hint" : "💡 Get AI Hint"}
-                            </button>
 
-                            {hints.length > 0 && (
-                                <div style={{
-                                    background: "rgba(255,149,0,0.07)",
-                                    border: "1px solid rgba(255,149,0,0.25)",
-                                    borderRadius: "8px",
-                                    padding: "0.75rem 1rem",
-                                }}>
-                                    <ul style={{ margin: 0, paddingLeft: "1.2rem" }}>
-                                        {hints.map((hint, idx) => (
-                                            <li key={idx} style={{ color: "#ffb347", fontSize: "0.88rem", lineHeight: "1.6" }}>
-                                                {hint}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
                     </div>
                 </div>
             </div>

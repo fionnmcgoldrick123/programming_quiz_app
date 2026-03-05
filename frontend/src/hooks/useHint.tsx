@@ -16,31 +16,7 @@ export function useHint() {
     setLoading(false);
   };
 
-const fetchCodingHint = async (
-    question: string,
-    studentCode: string,
-    starterCode: string,
-    testCases: string[],
-    language: string
-): Promise<void> => {
-    setLoading(true);
-    const res = await fetch("http://localhost:8000/hint/coding", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-            question,
-            student_code: studentCode,
-            starter_code: starterCode,
-            test_cases: testCases,
-            language,
-        }),
-    });
-    const data = await res.json();
-    setHints(data.hints);
-    setLoading(false);
-};
-
   const clearHints = (): void => setHints([]);
 
-  return { hints, loading, fetchMcqHint, fetchCodingHint, clearHints };
+  return { hints, loading, fetchMcqHint, clearHints };
 }

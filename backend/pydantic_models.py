@@ -86,9 +86,3 @@ class McqHintRequest(BaseModel):
     options: List[str]
 
 
-class CodingHintRequest(BaseModel):
-    question: str
-    student_code: str
-    starter_code: str
-    test_cases: List[str]
-    language: str = "python"
