@@ -1,357 +1,171 @@
-# Adaptive Programming Quiz App
+﻿# AI-Powered Adaptive Programming Quiz Platform
 
-A web-based platform that generates personalised, AI-powered programming quizzes.  
-Users choose the programming language, topic, and AI model, and the backend produces structured quizzes with automatic answer validation. This will be accompanied with a user profile with a 'gamified' experience reward system for user satisfaction and engagement.
+**Final Year Project: Development of an AI-Powered Web Platform for Adaptive Programming Quizzes and Practical Learning**
 
-This project uses:
+This is a full-stack web application that generates personalised, AI-driven programming quizzes and coding challenges in real time. Users specify a topic, programming language, and number of questions. The platform then uses a large language model to produce either multiple choice questions or practical coding challenges, assigns a difficulty rating predicted by a trained machine learning model, and provides a live in-browser code editor where users can write, run, and submit solutions against automated test cases.
 
-- **Frontend:** ``React`` + ``Vite`` + ``TypeScript`` 
-- **Backend:** ``FastAPI`` ``(Python)  ``
-- **Database:** ``PostgreSQL`` with ``TablePlus``
-- **Containerisation:** ``Docker`` / ``Docker Compose  ``
-- **AI Layer:** Pluggable LLM endpoints
-- **CI/CD:** ``GitHub Actions``
-
-This app is part of my Final Year Project:  
-**Development of an AI-Powered Web Platform for Adaptive Programming Quizzes and Practical Learning.**
+The system is designed around the principle of adaptive learning. Difficulty is not hardcoded or guessed. It is inferred by an ML pipeline trained on IBM Project CodeNet, a dataset of over four million competitive programming submissions across 4000 problems. The model analyses structural and linguistic features of each generated question and classifies it as easy, medium, or hard before it is sent to the user.
 
 ---
 
-## Features
+## Technology Stack
 
-- AI-generated quizzes based on language and topic  
-- Ability to switch AI models  
-- Adaptive difficulty  
-- Strict JSON quiz format enforced server-side  
-- User accounts and 'gamified' progress system
-- Account registering, login and security.
-
----
-
-## How to Run / Set Up
-
-### 1. Backend (FastAPI)
-
-1. Navigate to the backend directory:
-   ```
-   cd backend
-   ```
-2. Create a virtual environment:
-   ```
-   python -m venv venv
-   ```
-3. Activate the environment:
-   - Windows:
-     ```
-     venv\Scripts\activate
-     ```
-   - macOS/Linux:
-     ```
-     source venv/bin/activate
-     ```
-4. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-5. Start the FastAPI server:
-   ```
-   uvicorn main:app --reload
-   ```
-   The backend will be available at: http://127.0.0.1:8000
+| Layer | Technology |
+|---|---|
+| Frontend | React 18, TypeScript, Vite |
+| Backend | FastAPI, Python |
+| Database | PostgreSQL via psycopg3 |
+| AI Generation | OpenAI GPT-4o-mini, Ollama Llama 3.1:8b |
+| Difficulty ML | scikit-learn (Random Forest, Gradient Boosting, XGBoost, SVM, Logistic Regression, kNN) |
+| Code Execution | Server-side subprocess sandboxing (Python, JavaScript) |
+| Auth | JWT with bcrypt password hashing |
+| In-Browser Editor | Monaco Editor (same engine as VS Code) |
+| Code Quality Tools | Python Black and Flake8 |
 
 ---
 
-### 2. Frontend (React + Vite)
+## Core Features
 
-1. Navigate to the frontend directory:
-   ```
-   cd frontend
-   ```
-2. Install dependencies:
-   ```
-   npm install
-   ```
-3. Start the development server:
-   ```
-   npm run dev
-   ```
-   The frontend will be available at: http://localhost:5173
+### Quiz Generation
+Users navigate to the prompt page, select a programming language and topic, choose the number of questions, and pick between two quiz types. The prompt is sent to the backend, which constructs a structured system instruction from a format guide and forwards it to the selected AI model. The response is parsed server-side into a strict schema before being returned to the frontend.
 
----
+### Multiple Choice Quizzes
+AI-generated MCQ quizzes present the user with a question and four answer options. Users answer each question, receive immediate feedback, and earn XP for correct answers. An AI-powered hint system is available on demand, which calls a separate backend endpoint to generate contextual hints for any question.
 
-### 3. Classifier Model (PyTorch)
+### Coding Challenges
+Coding questions include a problem description, starter code, and a set of test cases. The user writes their solution in the Monaco editor embedded in the browser. They can run their code freely against visible inputs, then submit it when ready. Submissions are executed server-side and checked against all test cases. Results show pass or fail status per test case with actual versus expected output.
 
-1. Navigate to the classifier-model directory:
-   ```
-   cd classifier-model
-   ```
-2. Create and activate a virtual environment (as above).
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+### Adaptive Difficulty Prediction
+Every coding question generated by the AI is automatically tagged with a difficulty label before it reaches the user. The backend difficulty service loads a trained scikit-learn pipeline at startup and applies it to each question. The pipeline extracts numeric features including time and memory limits, estimated acceptance rate, average CPU time and code size, character and word length of the problem description, occurrence of constraint values, and code-like tokens. It also applies TF-IDF vectorisation to the full description text and detects topic-specific keywords across categories such as dynamic programming, graph traversal, recursion, sorting, binary search, string manipulation, greedy algorithms, and stack-based problems. Multiple classifiers are trained and evaluated, and the best performer is serialised and deployed.
 
----
+### User Accounts and Progress
+Users register and log in with JWT-protected endpoints. Passwords are hashed with bcrypt before storage. Upon login, a 24-hour JWT token is issued and stored client-side. Authenticated users have a profile page showing their current XP total, level, and account details. Earning XP from quizzes is handled by a dedicated endpoint that recalculates the user's level based on cumulative experience points.
 
-### 4. Local LLM (Ollama, Optional)
-
-- Download and install Ollama from [ollama.com](https://ollama.com/download/windows).
-- Pull a model (e.g., llama3.1:8b):
-  ```
-  ollama pull llama3.1:8b
-  ```
-- Run the model:
-  ```
-  ollama run llama3.1:8b
-  ```
-
----
-
-### Notes
-
-- Ensure PostgreSQL is running and accessible for backend database operations.
-- For Docker setup, see future updates in this README.
-- For CI/CD, GitHub Actions are pre-configured for linting, testing, and build validation.
-
----
-
-## Dataset: IBM Project CodeNet
-
-This project leverages the **IBM Project CodeNet** dataset to build custom AI models and process programming data for adaptive quizzes and code analysis.
-
-### What is IBM Project CodeNet?
-IBM Project CodeNet is a large-scale, open dataset designed for machine learning and code understanding research. It contains:
-
-- **Size:** ~7GB compressed, ~30GB uncompressed
-- **Contents:** Over 14 million code samples across 50+ programming languages
-- **Metadata:** Problem descriptions, submissions, user information, and code correctness labels
-- **Source:** Competitive programming problems from online platforms
-
-### How is CodeNet Used in This Project?
-
-- **Custom Model Training:** The dataset provides diverse code samples and problem metadata, enabling the training of models for code generation, classification, and error detection.
-- **Data Processing:** CodeNet's rich structure allows for extracting programming concepts, language-specific features, and user behavior, which are used to generate adaptive quizzes and validate answers.
-- **Language & Topic Coverage:** With its wide language and topic coverage, CodeNet supports personalized quiz creation for multiple programming languages and skill levels.
-- **Benchmarking:** The dataset is used to benchmark and evaluate the performance of AI models integrated into the platform.
-
-### Why CodeNet?
-CodeNet is ideal for this project because it offers:
-- Real-world code submissions and problem-solving data
-- Extensive language diversity
-- Labeled data for supervised learning tasks
-- Opportunities for research in code understanding, generation, and education
-
-For more information, see the [IBM Project CodeNet website](https://github.com/IBM/Project_CodeNet).
+### AI Model Switching
+The platform supports switching between OpenAI GPT-4o-mini and a locally hosted Llama 3.1:8b model running via Ollama. The active model is held in application state on the backend and can be changed at runtime via the frontend without restarting the server.
 
 ---
 
 ## Project Structure
 
 ```
-FinalYearProject/
-├── backend/                      # FastAPI backend server
-│   ├── main.py                  # FastAPI application entry point
-│   ├── db.py                    # Database models and connection
-│   ├── pydantic_models.py       # Data validation models
-│   ├── prompt_guide.txt         # LLM prompt formatting guide
-│   ├── requirements.txt         # Python dependencies
-│   └── parsers/                 # LLM response parsers
-│       ├── parser_ollama.py     # Ollama model parser
-│       └── parser_openai.py     # OpenAI model parser
-│
-├── frontend/                     # React + Vite + TypeScript frontend
-│   ├── src/
-│   │   ├── components/          # Reusable React components
-│   │   ├── css-files/           # Styling
-│   │   └── utils/               # Utility functions
-│   ├── package.json
-│   └── vite.config.ts
-│
-├── classifier-model/             # PyTorch classifier model
-│   ├── classifier_model.py      # Model architecture and utilities
-│   └── requirements.txt         # Model dependencies
-│
-└── docs/                         # Documentation and assets
+backend/           FastAPI application, routes, auth, code execution, AI model handling
+frontend/          React + TypeScript frontend with Vite
+ml_models/         Difficulty predictor training script
+docs/              Dissertation LaTeX source and figures
 ```
-
-- - - 
-
-## Key Features
-
-- Multi-language quiz generation **(Python, JS, Java, etc.)**
-
-- Coding sandboxes for multi-language programming **(Judge0, GitHub Codespaces API, ect.)**
-
-- AI-powered question & answer checking for both theory and coding practical quizzes
-
-- Difficulty adaptation using user request & performance
-
-- Difficulty assignment by personal classifier model
-
-- Real backend with REST API
-
-- User accounts & authentication
-
-- Gamification rewarding (XP, streaks, rewards)
 
 ---
 
-## CI/CD Pipeline
+## Setup and Running
 
-This project uses **GitHub Actions** for automated testing and quality checks. The pipeline runs on every push and pull request to ensure code quality and catch issues early.
+### Prerequisites
 
-### Pipeline Jobs
-
-- **Frontend CI**: ESLint, TypeScript type checking, and build validation
-- **Backend CI**: Python code formatting (Black), linting (Flake8), and syntax validation
-- **Classifier Model CI**: Python linting and syntax validation
-
-The pipeline runs in parallel for faster feedback and automatically validates all code changes before they're merged.
-
-📖 **[View detailed CI/CD documentation](.github/CI-CD-DOCS.md)**
+- Python 3.11 or later
+- Node.js 18 or later
+- PostgreSQL running locally or via Docker
+- An OpenAI API key (for OpenAI model usage)
+- Ollama installed locally (optional, for local LLM usage)
 
 ---
 
-##  Local LLM Experiments (Ollama)
+### 1. Environment Variables
 
-This project supports running large language models locally using Ollama.
-I experimented with models like `llama3.1:8b` on my machine.
-
-### To try the same setup:
-
-Install [*Ollama*](https://ollama.com/download/windows) for *Windows, Mac or Linux*.
-
-Pull any *Ollama* provided models.
-
-They will be automatically downloaded to the directory: ``C:\Users\<YOUR_USERNAME>\.ollama\models\``. You will find the actual model under the ``model/blobs`` directory where the model is split up into files with hashed file names.
-
-List of models are [here](https://ollama.com/search).
-
-For me I pulled the ``llama3.1:8b``. 
-
-*I selected the llama3.1:8b model because its 8-billion-parameter size provides a strong balance between capability and efficiency. It is large enough to deliver solid reasoning and generation quality, yet still lightweight enough to run locally on a standard laptop without a GPU. This makes it suitable for quick experimentation, offline testing, and integrating local LLM behaviour into my workflow. The model is also easy to install and manage through Ollama, which avoids the need for external API usage.*
+Create a `.env` file in the project root with the following:
 
 ```
-ollama pull llama3.1:8b
+OPENAI_API_KEY=your_openai_key_here
+JWT_SECRET=your_secret_key_here
+DATABASE_URL=your_postgres_connection_string
+CODENET_PATH=path_to_project_codenet_dataset
 ```
 
-You can now run the model with the following command: 
+---
 
-```
-ollama run llama3.1:8b
-```
-
-- - -
-
-### Local LLM Testing (llama3.1:8b)
-
-You can see my first interation with my local model [here](./docs/OllamaLocalRun.png). I am just using the Ollama desktop application.
-
-I then ran the first test prompt to generate a quiz on Java Linked Lists. This prompt included the contents of **prompt-guide.txt**, which holds the internal formatting rules and instructions sent from the backend (not visible to the user).
-
-See **prompt-guide.txt** details:
-
-<details>
-
-```
-You must format every quiz using this exact JSON structure:
-
-{
-  "title": "",
-  "difficulty": "",
-  "questions": [
-    {
-      "question": "",
-      "options": ["A", "B", "C", "D"],
-      "answer": ""
-    }
-  ]
-}
-
-Rules:
-- Never include extra explanations unless specifically asked.
-- Always return valid JSON.
-- Always include exactly 4 multiple-choice options that are closely related and all plausible
-  with only one right answer.
-- Keep questions short and clear.
-
-Now base this quiz off the following prompt:
-
-```
-</details>
-
-
-### Future LoRA Implentation
-
-After researching how to modify locally run AI models, *LoRA* appears to be a strong option for future fine-tuning. However, I will first get the model running with my application to see if it has the capabilites to reach my standards first. 
-
-For now, I am going to see if the model operates well with the tasks it's given. If it needs fine-tuning I look towards *LoRA* or *HuggingFace*.
-
-## Custom Classifier Model
-
-A PyTorch-based classifier model designed to adaptively determine quiz difficulty and personalize question selection based on user performance and skill level.
-
-### Setup (Classifier Model)
-
-Navigate to the classifier-model directory:
+### 2. Backend
 
 ```bash
-cd classifier-model
-```
-
-Create a virtual environment:
-
-```bash
+cd backend
 python -m venv venv
+
+# Windows
+venv\Scripts\activate
+
+# macOS or Linux
+source venv/bin/activate
+
+pip install -r ../requirements.txt
+uvicorn main:app --reload
 ```
 
-Activate it:
+The API will be available at `http://127.0.0.1:8000`.
+
+---
+
+### 3. Frontend
 
 ```bash
-source venv/bin/activate      # macOS/Linux
-venv\Scripts\activate         # Windows
+cd frontend
+npm install
+npm run dev
 ```
 
-Install dependencies:
+The frontend will be available at `http://localhost:5173`.
+
+---
+
+### 4. Difficulty Predictor (ML Training)
+
+The trained model file `difficulty_model.pkl` must be present in the `ml_models/` directory for the backend to predict difficulty. To retrain the model from scratch using the IBM Project CodeNet dataset:
 
 ```bash
-pip install -r requirements.txt
+python ml_models/difficulty_predictor.py
 ```
 
-### Dependencies
+This script reads problem metadata, aggregates submission statistics, extracts text features from HTML problem descriptions, trains and evaluates all classifiers, and saves the best pipeline to `ml_models/difficulty_model.pkl`.
 
-The classifier model utilizes:
-- **PyTorch:** Deep learning framework (torch, torchaudio, torchvision)
-- **Pandas:** Data manipulation and analysis
-- **Scikit-Learn:** Machine learning utilities (preprocessing, model evaluation, pipeline)
-- **NumPy:** Numerical computing
-- **SciPy:** Scientific computing
+---
 
-### Current Status
+### 5. Local LLM via Ollama (Optional)
 
-The model structure is initialized with a basic fully-connected neural network architecture. Data loading and training pipelines are templated for future implementation once the model's purpose and dataset are finalized.
+Install Ollama from [ollama.com](https://ollama.com) and pull the Llama 3.1 8B model:
 
-### Data Sources (Future)
+```bash
+ollama pull llama3.1:8b
+ollama serve
+```
 
-[Leetcode Problem Dataset](https://www.kaggle.com/datasets/gzipchrist/leetcode-problem-dataset/data)
+Once running, switch the active model in the frontend to use the local model instead of OpenAI.
 
-[Hugging Face - Codeforces Dataset](https://huggingface.co/datasets/open-r1/codeforces)
+---
 
-## Contributors
+## API Reference
 
-**Author:** *Fionn McGoldrick* | *G00422349*
+| Method | Endpoint | Description | Auth Required |
+|---|---|---|---|
+| POST | `/prompt` | Generate a quiz or coding challenge | No |
+| POST | `/model` | Switch active AI model | No |
+| POST | `/register` | Create a new user account | No |
+| POST | `/login` | Authenticate and receive a JWT token | No |
+| GET | `/me` | Get current user profile | Yes |
+| POST | `/add-xp` | Add XP to the authenticated user | Yes |
+| POST | `/run-code` | Execute code and return output | No |
+| POST | `/submit-code` | Run code against test cases | No |
+| POST | `/hint/mcq` | Get AI-generated hints for an MCQ | No |
+| GET | `/health` | Health check | No |
 
+---
 
+## Dataset: IBM Project CodeNet
 
+The difficulty prediction model was trained on IBM Project CodeNet, an open dataset published by IBM Research. It contains over 14 million code submissions across more than 4000 problem statements from competitive programming platforms, covering 50 programming languages.
 
+The dataset provides problem-level metadata including time limits, memory limits, and per-submission statistics such as CPU time, memory usage, and code size. Problem descriptions are stored as HTML files, which the training script parses to extract linguistic and structural features. This combination of quantitative submission statistics and natural language features gives the trained classifier a meaningful signal for distinguishing problem difficulty.
 
+The `CODENET_PATH` environment variable must point to the root of a local Project CodeNet installation before running the training script.
 
+---
 
+## Author
 
-
-
-
-
-
-
-
+Fionn McGoldrick | G00422349
