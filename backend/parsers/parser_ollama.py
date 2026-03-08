@@ -1,6 +1,7 @@
 from pydantic_models import QuizSchema, CodingQuestionSchema
 from quiz_metadata import compute_coding_metadata
 from difficulty_service import predict_difficulty_for_question
+from tag_service import predict_tags_for_question
 import json
 import re
 
@@ -46,12 +47,21 @@ def ollama_parser(response: dict) -> list[QuizSchema]:
             opt.split(": ", 1)[1] if ": " in opt else opt for opt in raw_opts
         ]
 
+        # Get topic tags from AI response, or predict them
+        topic_tags = q.get("topic_tags", [])
+        if not topic_tags:
+            topic_tags = predict_tags_for_question(quiz_title, q["question"])
+            print(f"[TAG_SERVICE] MCQ predicted tags: {topic_tags}")
+        else:
+            print(f"[TAG_SERVICE] MCQ tags from AI: {topic_tags}")
+
         questions.append(
             QuizSchema(
                 title=quiz_title,
                 question=q["question"],
                 options=clean_options,
                 correct_answer=q["answer"],
+                topic_tags=topic_tags,
             )
         )
 
@@ -85,6 +95,17 @@ def ollama_coding_parser(response: dict) -> list[CodingQuestionSchema]:
         starter_code = q.get("starter_code", "")
         test_cases = q.get("test_cases", [])
         computed = compute_coding_metadata(question, starter_code, test_cases)
+        
+        # Get topic tags from AI response, or predict them
+        topic_tags = q.get("topic_tags", [])
+        if not topic_tags:
+            question_title = q.get("title", "Coding Challenge")
+            topic_tags = predict_tags_for_question(question_title, question)
+            print(f"[TAG_SERVICE] Coding predicted tags: {topic_tags}")
+        else:
+            print(f"[TAG_SERVICE] Coding tags from AI: {topic_tags}")
+            topic_tags = predict_tags_for_question(question_title, question)
+        
         schema = CodingQuestionSchema(
             question=question,
             starter_code=starter_code,
@@ -92,7 +113,7 @@ def ollama_coding_parser(response: dict) -> list[CodingQuestionSchema]:
             hints=q.get("hints", []),
             time_limit_ms=q.get("time_limit_ms", 1000),
             memory_limit_kb=q.get("memory_limit_kb", 65536),
-            topic_tags=q.get("topic_tags", []),
+            topic_tags=topic_tags,
             avg_cpu_time_ms=q.get("avg_cpu_time_ms", 0),
             avg_memory_kb=q.get("avg_memory_kb", 0),
             avg_code_lines=q.get("avg_code_lines", 0),

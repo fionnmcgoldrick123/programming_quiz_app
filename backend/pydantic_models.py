@@ -8,6 +8,7 @@ class QuizSchema(BaseModel):
     question: str
     options: List[str]
     correct_answer: str
+    topic_tags: List[str] = []  # AI-predicted topic tags
 
 
 class PromptRequest(BaseModel):
