@@ -12,6 +12,7 @@ interface QuizQuestion {
     question: string;
     options: string[];
     correct_answer: string;
+    topic_tags?: string[];
 }
 
 /* ── responsive CSS injected once ── */
@@ -211,6 +212,27 @@ const quizCss = `
     font-family: 'Fira Code', monospace;
     font-size: 0.88rem;
     line-height: 1.6;
+}
+
+/* ── tags metadata ── */
+.quiz-meta-tags {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+    margin-bottom: 16px;
+}
+.quiz-meta-tag {
+    display: inline-block;
+    background: linear-gradient(135deg, #ff9500, #ff7700);
+    color: #1a1a1a;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 6px;
+    white-space: nowrap;
+    box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
 }
 
 /* ── options ── */
@@ -654,6 +676,17 @@ function QuizPage() {
                     <div className="quiz-card">
                         <h2 className="quiz-card__title">{currentQ.title}</h2>
                         <h3 className="quiz-card__question">{currentQ.question}</h3>
+
+                        {/* Topic Tags */}
+                        {currentQ.topic_tags && currentQ.topic_tags.length > 0 && (
+                            <div className="quiz-meta-tags">
+                                {currentQ.topic_tags.map((tag) => (
+                                    <span key={tag} className="quiz-meta-tag">
+                                        {tag}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
 
                         {/* Level Up Banner */}
                         {levelUpInfo.show && (

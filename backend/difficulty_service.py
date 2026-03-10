@@ -17,13 +17,14 @@ import joblib
 import pandas as pd
 
 # ── Locate the model and the ml_models package ───────────────────────────────
-_BACKEND_DIR   = os.path.dirname(__file__)
-_ML_MODELS_DIR = os.path.normpath(os.path.join(_BACKEND_DIR, "..", "ml_models"))
-_MODEL_PATH    = os.path.join(_ML_MODELS_DIR, "difficulty_model.pkl")
+_BACKEND_DIR        = os.path.dirname(__file__)
+_ML_MODELS_DIR      = os.path.normpath(os.path.join(_BACKEND_DIR, "..", "ml_models"))
+_DIFFICULTY_DIR     = os.path.join(_ML_MODELS_DIR, "difficulty_classifier")
+_MODEL_PATH         = os.path.join(_DIFFICULTY_DIR, "difficulty_model.pkl")
 
-# Add ml_models to sys.path so we can import extract_description_features
-if _ML_MODELS_DIR not in sys.path:
-    sys.path.insert(0, _ML_MODELS_DIR)
+# Add difficulty_classifier dir to sys.path so we can import difficulty_predictor
+if _DIFFICULTY_DIR not in sys.path:
+    sys.path.insert(0, _DIFFICULTY_DIR)
 
 try:
     import difficulty_predictor as _dp_module  # type: ignore[import]
