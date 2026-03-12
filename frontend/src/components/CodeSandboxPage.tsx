@@ -79,6 +79,11 @@ function CodeSandboxPage() {
         return savedSession?.questions ?? location.state?.quizData ?? [];
     });
 
+    const [quizPrompt] = useState<string>(() => {
+        if (isFreshQuiz) return location.state?.prompt ?? "";
+        return savedSession?.quizPrompt ?? location.state?.prompt ?? "";
+    });
+
     const [language] = useState<string>(() => {
         if (isFreshQuiz) return location.state?.language ?? "javascript";
         return savedSession?.language ?? location.state?.language ?? "javascript";
@@ -129,6 +134,7 @@ function CodeSandboxPage() {
                 correct_answers: solvedCountRef.current,
                 tags: allTags,
                 language: language,
+                prompt: quizPrompt || undefined,
             }),
         }).catch(err => console.error('Error saving quiz result:', err));
     }, [finished]);  // eslint-disable-line react-hooks/exhaustive-deps
@@ -144,6 +150,7 @@ function CodeSandboxPage() {
                 code,
                 finished,
                 solvedCount: solvedCountRef.current,
+                quizPrompt,
             }));
         }
     }, [sessionId, questions, language, currentIndex, code, finished, CODE_SESSION_KEY]);

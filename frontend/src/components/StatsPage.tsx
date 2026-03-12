@@ -17,6 +17,7 @@ interface RecentQuiz {
     correct_answers: number;
     tags: string[];
     language: string | null;
+    prompt: string | null;
     completed_at: string | null;
 }
 
@@ -144,22 +145,43 @@ function StatsPage() {
                             {/* KPI Cards */}
                             <div className="stats-kpi-row">
                                 <div className="stats-kpi-card">
-                                    <span className="kpi-icon kpi-icon--quizzes"></span>
+                                    <span className="kpi-icon kpi-icon--quizzes">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/>
+                                            <path d="M9 17v1a3 3 0 0 0 6 0v-1"/>
+                                            <path d="M8 14h8"/>
+                                        </svg>
+                                    </span>
                                     <span className="kpi-value">{stats.total_quizzes}</span>
                                     <span className="kpi-label">Quizzes Taken</span>
                                 </div>
                                 <div className="stats-kpi-card">
-                                    <span className="kpi-icon kpi-icon--questions"></span>
+                                    <span className="kpi-icon kpi-icon--questions">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                            <circle cx="12" cy="12" r="10"/>
+                                            <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+                                            <circle cx="12" cy="17" r="0.5" fill="currentColor"/>
+                                        </svg>
+                                    </span>
                                     <span className="kpi-value">{stats.total_questions}</span>
                                     <span className="kpi-label">Questions Completed</span>
                                 </div>
                                 <div className="stats-kpi-card stats-kpi-card--correct">
-                                    <span className="kpi-icon kpi-icon--correct"></span>
+                                    <span className="kpi-icon kpi-icon--correct">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <polyline points="20 6 9 17 4 12"/>
+                                        </svg>
+                                    </span>
                                     <span className="kpi-value">{stats.total_correct}</span>
                                     <span className="kpi-label">Correct Answers</span>
                                 </div>
                                 <div className="stats-kpi-card stats-kpi-card--wrong">
-                                    <span className="kpi-icon kpi-icon--wrong"></span>
+                                    <span className="kpi-icon kpi-icon--wrong">
+                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <line x1="18" y1="6" x2="6" y2="18"/>
+                                            <line x1="6" y1="6" x2="18" y2="18"/>
+                                        </svg>
+                                    </span>
                                     <span className="kpi-value">{stats.total_wrong}</span>
                                     <span className="kpi-label">Wrong Answers</span>
                                 </div>
@@ -320,7 +342,23 @@ function StatsPage() {
                                     <div className="recent-list">
                                         {stats.recent.map((r, i) => (
                                             <div className="recent-item" key={i}>
-                                                <div className={`recent-icon recent-icon--${r.quiz_type}`}></div>
+                                                <div className={`recent-icon recent-icon--${r.quiz_type}`}>
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    {r.quiz_type === "mcq" ? (
+                                                        <>
+                                                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                                            <polyline points="14 2 14 8 20 8"/>
+                                                            <line x1="8" y1="13" x2="16" y2="13"/>
+                                                            <line x1="8" y1="17" x2="12" y2="17"/>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <polyline points="16 18 22 12 16 6"/>
+                                                            <polyline points="8 6 2 12 8 18"/>
+                                                        </>
+                                                    )}
+                                                </svg>
+                                            </div>
                                                 <div className="recent-info">
                                                     <span className="recent-type">
                                                         {r.quiz_type === "mcq" ? "MCQ Quiz" : `Coding (${r.language})`}
@@ -328,6 +366,9 @@ function StatsPage() {
                                                     <span className="recent-score">
                                                         {r.correct_answers}/{r.total_questions} correct
                                                     </span>
+                                                    {r.prompt && (
+                                                        <span className="recent-prompt">"{r.prompt}"</span>
+                                                    )}
                                                 </div>
                                                 {r.tags.length > 0 && (
                                                     <div className="recent-tags">

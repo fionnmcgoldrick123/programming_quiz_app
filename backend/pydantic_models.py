@@ -93,5 +93,6 @@ class SaveQuizResultRequest(BaseModel):
     correct_answers: int
     tags: List[str] = []
     language: Optional[str] = None
+    prompt: Optional[str] = None
 
 

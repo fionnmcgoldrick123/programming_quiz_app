@@ -458,6 +458,11 @@ function QuizPage() {
         return savedSession?.quiz ?? location.state?.quizData ?? [];
     });
 
+    const [quizPrompt] = useState<string>(() => {
+        if (isFreshQuiz) return location.state?.prompt ?? "";
+        return savedSession?.quizPrompt ?? location.state?.prompt ?? "";
+    });
+
     const [sessionId] = useState<number>(() => {
         if (isFreshQuiz) return location.state.sessionId ?? Date.now();
         return savedSession?.sessionId ?? location.state?.sessionId ?? Date.now();
@@ -498,6 +503,7 @@ function QuizPage() {
                 finished,
                 totalXpEarned,
                 correctCount: correctCountRef.current,
+                quizPrompt,
             }));
         }
     }, [sessionId, quiz, currentIndex, finished, totalXpEarned, QUIZ_SESSION_KEY]);
@@ -521,6 +527,7 @@ function QuizPage() {
                 total_questions: quiz.length,
                 correct_answers: correctCountRef.current,
                 tags: allTags,
+                prompt: quizPrompt || undefined,
             }),
         }).catch(err => console.error('Error saving quiz result:', err));
     }, [finished]);  // eslint-disable-line react-hooks/exhaustive-deps

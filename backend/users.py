@@ -276,9 +276,14 @@ def _ensure_quiz_results_table():
                     correct_answers INTEGER NOT NULL DEFAULT 0,
                     tags TEXT[] DEFAULT '{}',
                     language VARCHAR(50),
+                    prompt TEXT,
                     completed_at TIMESTAMP DEFAULT NOW()
                 );
                 """
+            )
+            # Migration: add prompt column if table pre-dates this field
+            cur.execute(
+                "ALTER TABLE quiz_results ADD COLUMN IF NOT EXISTS prompt TEXT;"
             )
             conn.commit()
 
@@ -292,8 +297,8 @@ async def save_quiz_result(user_id: int, data: SaveQuizResultRequest):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                INSERT INTO quiz_results (user_id, quiz_type, total_questions, correct_answers, tags, language)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO quiz_results (user_id, quiz_type, total_questions, correct_answers, tags, language, prompt)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
                 RETURNING id;
                 """,
                 (
@@ -303,6 +308,7 @@ async def save_quiz_result(user_id: int, data: SaveQuizResultRequest):
                     data.correct_answers,
                     data.tags,
                     data.language,
+                    data.prompt,
                 ),
             )
             result = cur.fetchone()
@@ -364,7 +370,7 @@ async def get_user_stats(user_id: int):
             # Recent activity – last 10 quizzes
             cur.execute(
                 """
-                SELECT quiz_type, total_questions, correct_answers, tags, language, completed_at
+                SELECT quiz_type, total_questions, correct_answers, tags, language, prompt, completed_at
                 FROM quiz_results
                 WHERE user_id = %s
                 ORDER BY completed_at DESC
@@ -383,6 +389,7 @@ async def get_user_stats(user_id: int):
                 "correct_answers": r["correct_answers"],
                 "tags": r["tags"] or [],
                 "language": r["language"],
+                "prompt": r["prompt"],
                 "completed_at": r["completed_at"].isoformat() if r["completed_at"] else None,
             }
         )

@@ -172,92 +172,44 @@
 }
 
 .kpi-icon {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     flex-shrink: 0;
 }
 
-/* Quizzes — stacked lines */
+.kpi-icon svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
 .kpi-icon--quizzes {
-    background:
-        linear-gradient(#ff9500, #ff9500) 4px 8px/22px 2.5px no-repeat,
-        linear-gradient(#ff9500, #ff9500) 4px 14px/16px 2.5px no-repeat,
-        linear-gradient(#ff9500, #ff9500) 4px 20px/19px 2.5px no-repeat;
+    background: rgba(255,149,0,0.12);
     border: 1.5px solid rgba(255,149,0,0.3);
-    border-radius: 10px;
+    color: #ff9500;
 }
 
-/* Questions — circle with dot */
 .kpi-icon--questions {
-    background: rgba(255,149,0,0.15);
-    border: 2px solid rgba(255,149,0,0.4);
-    border-radius: 50%;
-    position: relative;
-}
-.kpi-icon--questions::after {
-    content: '';
-    position: absolute;
-    width: 5px;
-    height: 5px;
-    background: #ff9500;
-    border-radius: 50%;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, 30%);
-}
-.kpi-icon--questions::before {
-    content: '';
-    position: absolute;
-    width: 5px;
-    height: 9px;
-    border: 2px solid #ff9500;
-    border-bottom: none;
-    border-radius: 3px 3px 0 0;
-    top: 6px;
-    left: 50%;
-    transform: translateX(-50%);
+    background: rgba(255,149,0,0.12);
+    border: 1.5px solid rgba(255,149,0,0.3);
+    color: #ff9500;
 }
 
-/* Correct — checkmark */
 .kpi-icon--correct {
-    background: rgba(76,175,80,0.15);
-    border: 1.5px solid rgba(76,175,80,0.35);
-    border-radius: 50%;
-    position: relative;
-}
-.kpi-icon--correct::before {
-    content: '';
-    position: absolute;
-    width: 8px;
-    height: 14px;
-    border-right: 2.5px solid #4caf50;
-    border-bottom: 2.5px solid #4caf50;
-    top: 7px;
-    left: 12px;
-    transform: rotate(45deg) translate(-40%, -10%);
+    background: rgba(76,175,80,0.12);
+    border: 1.5px solid rgba(76,175,80,0.3);
+    color: #4caf50;
 }
 
-/* Wrong — X */
 .kpi-icon--wrong {
-    background: rgba(244,67,54,0.15);
-    border: 1.5px solid rgba(244,67,54,0.35);
-    border-radius: 50%;
-    position: relative;
+    background: rgba(244,67,54,0.12);
+    border: 1.5px solid rgba(244,67,54,0.3);
+    color: #f44336;
 }
-.kpi-icon--wrong::before,
-.kpi-icon--wrong::after {
-    content: '';
-    position: absolute;
-    width: 16px;
-    height: 2.5px;
-    background: #f44336;
-    border-radius: 2px;
-    top: 50%;
-    left: 50%;
-}
-.kpi-icon--wrong::before { transform: translate(-50%, -50%) rotate(45deg); }
-.kpi-icon--wrong::after  { transform: translate(-50%, -50%) rotate(-45deg); }
 
 .kpi-value {
     font-size: 2.2rem;
@@ -378,38 +330,31 @@
 }
 
 .recent-icon {
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
     flex-shrink: 0;
-    position: relative;
-}
-
-.recent-icon--mcq {
-    background: rgba(255,149,0,0.15);
-    border: 1.5px solid rgba(255,149,0,0.35);
-    background-image:
-        linear-gradient(#ff9500, #ff9500) 5px 9px/16px 2px,
-        linear-gradient(#ff9500, #ff9500) 5px 14px/12px 2px,
-        linear-gradient(#ff9500, #ff9500) 5px 19px/14px 2px;
-    background-repeat: no-repeat;
-}
-
-.recent-icon--coding {
-    background: rgba(108,99,255,0.15);
-    border: 1.5px solid rgba(108,99,255,0.35);
-}
-.recent-icon--coding::before {
-    content: '</';
-    position: absolute;
-    inset: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+}
+
+.recent-icon svg {
+    width: 17px;
+    height: 17px;
+    display: block;
+}
+
+.recent-icon--mcq {
+    background: rgba(255,149,0,0.12);
+    border: 1.5px solid rgba(255,149,0,0.3);
+    color: #ff9500;
+}
+
+.recent-icon--coding {
+    background: rgba(108,99,255,0.12);
+    border: 1.5px solid rgba(108,99,255,0.3);
     color: #6c63ff;
-    font-family: 'Fira Code', monospace;
-    font-size: 0.65rem;
-    font-weight: 700;
 }
 
 .recent-info {
@@ -427,6 +372,17 @@
 .recent-score {
     color: #888;
     font-size: 0.78rem;
+}
+
+.recent-prompt {
+    color: #666;
+    font-size: 0.75rem;
+    font-style: italic;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px;
 }
 
 .recent-tags {

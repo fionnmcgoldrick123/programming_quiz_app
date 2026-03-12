@@ -145,9 +145,9 @@ function PromptPage(){
             console.log("Quiz from backend:", quiz);
             
             if (quizType === 'coding') {
-                navigate('/code-sandbox', { state: { quizData: quiz, language: selectedLanguage, sessionId: Date.now() } });
+                navigate('/code-sandbox', { state: { quizData: quiz, language: selectedLanguage, sessionId: Date.now(), prompt } });
             } else {
-                navigate('/quiz', { state: { quizData: quiz, sessionId: Date.now() } });
+                navigate('/quiz', { state: { quizData: quiz, sessionId: Date.now(), prompt } });
             }
         } catch (err: unknown) {
             if (err instanceof Error && err.name === 'AbortError') {
