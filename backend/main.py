@@ -22,10 +22,11 @@ from pydantic_models import (
     RunCodeRequest,
     SubmitCodeRequest,
     McqHintRequest,
+    SaveQuizResultRequest,
 )
 
 # Import service modules
-from users import register_user, login_user, get_user_profile, add_user_xp
+from users import register_user, login_user, get_user_profile, add_user_xp, save_quiz_result, get_user_stats
 from ai_models import send_prompt_to_model
 from code_executor import run_code, submit_code
 
@@ -160,6 +161,21 @@ async def add_xp(xp_data: AddXpRequest, token_data: dict = Depends(verify_token)
         dict: Updated user data with new XP and level.
     """
     return await add_user_xp(token_data["user_id"], xp_data.xp_amount)
+
+
+# --- Quiz Stats Endpoints ---
+
+
+@app.post("/save-quiz-result")
+async def save_result(data: SaveQuizResultRequest, token_data: dict = Depends(verify_token)):
+    """Save a completed quiz result for the authenticated user."""
+    return await save_quiz_result(token_data["user_id"], data)
+
+
+@app.get("/user-stats")
+async def user_stats(token_data: dict = Depends(verify_token)):
+    """Get aggregated statistics for the authenticated user."""
+    return await get_user_stats(token_data["user_id"])
 
 
 # --- Code Execution Endpoints ---

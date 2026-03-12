@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Navbar from "./Navbar";
 import { useAuth } from "../utils/AuthContext";
 import { useHint } from "../hooks/useHint"; 
@@ -487,6 +487,8 @@ function QuizPage() {
 
     const [levelUpInfo, setLevelUpInfo] = useState<{ show: boolean; newLevel: number | null }>({ show: false, newLevel: null });
 
+    const correctCountRef = useRef(isFreshQuiz ? 0 : (savedSession?.correctCount ?? 0));
+
     useEffect(() => {
         if (quiz.length && QUIZ_SESSION_KEY) {
             sessionStorage.setItem(QUIZ_SESSION_KEY, JSON.stringify({
@@ -495,6 +497,7 @@ function QuizPage() {
                 currentIndex,
                 finished,
                 totalXpEarned,
+                correctCount: correctCountRef.current,
             }));
         }
     }, [sessionId, quiz, currentIndex, finished, totalXpEarned, QUIZ_SESSION_KEY]);
@@ -505,6 +508,22 @@ function QuizPage() {
         setCorrectAnswerIndex(null);
         clearHints();
     }, [currentIndex]);
+
+    // Save quiz result to backend when finished
+    useEffect(() => {
+        if (!finished || !token || !quiz.length) return;
+        const allTags = [...new Set(quiz.flatMap(q => q.topic_tags ?? []))];
+        fetch('http://127.0.0.1:8000/save-quiz-result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+                quiz_type: 'mcq',
+                total_questions: quiz.length,
+                correct_answers: correctCountRef.current,
+                tags: allTags,
+            }),
+        }).catch(err => console.error('Error saving quiz result:', err));
+    }, [finished]);  // eslint-disable-line react-hooks/exhaustive-deps
 
     async function addXpToUser() {
         if (!token) return;
@@ -573,6 +592,7 @@ function QuizPage() {
         setCorrectAnswerIndex(correctIdx);
 
         if (isCorrect) {
+            correctCountRef.current += 1;
             setShowXpAnimation(true);
             setTotalXpEarned(prev => prev + XP_PER_CORRECT);
             addXpToUser();

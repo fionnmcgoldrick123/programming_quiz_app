@@ -87,3 +87,11 @@ class McqHintRequest(BaseModel):
     options: List[str]
 
 
+class SaveQuizResultRequest(BaseModel):
+    quiz_type: str  # "mcq" or "coding"
+    total_questions: int
+    correct_answers: int
+    tags: List[str] = []
+    language: Optional[str] = None
+
+

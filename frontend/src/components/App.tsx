@@ -9,6 +9,7 @@ import QuizPage from './QuizPage';
 import UserPage from './UserPage';
 import CodeSandboxPage from './CodeSandboxPage';
 import AboutPage from './AboutPage';
+import StatsPage from './StatsPage';
 
 function App() {
   return(
@@ -24,6 +25,7 @@ function App() {
           <Route path="/quiz" element={<QuizPage />} />
           <Route path="/code-sandbox" element={<CodeSandboxPage />} />
           <Route path="/about" element={<AboutPage />} />
+          <Route path="/stats" element={<StatsPage />} />
         </Routes>
       </AuthProvider>
     </Router>

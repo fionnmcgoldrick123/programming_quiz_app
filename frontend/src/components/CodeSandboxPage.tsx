@@ -1,5 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import Editor from "@monaco-editor/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -44,7 +44,7 @@ const codeSessionKey = (userId: number) => `codeSandboxSession_${userId}`;
 function CodeSandboxPage() {
     const location = useLocation();
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, token } = useAuth();
 
 
     const CODE_SESSION_KEY = user ? codeSessionKey(user.id) : null;
@@ -114,6 +114,25 @@ function CodeSandboxPage() {
         return savedSession?.finished ?? false;
     });
 
+    const solvedCountRef = useRef(isFreshQuiz ? 0 : (savedSession?.solvedCount ?? 0));
+
+    // Save coding quiz result when finished
+    useEffect(() => {
+        if (!finished || !token || !questions.length) return;
+        const allTags = [...new Set(questions.flatMap(q => q.topic_tags ?? []))];
+        fetch('http://127.0.0.1:8000/save-quiz-result', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({
+                quiz_type: 'coding',
+                total_questions: questions.length,
+                correct_answers: solvedCountRef.current,
+                tags: allTags,
+                language: language,
+            }),
+        }).catch(err => console.error('Error saving quiz result:', err));
+    }, [finished]);  // eslint-disable-line react-hooks/exhaustive-deps
+
     // Persist session to sessionStorage whenever progress changes
     useEffect(() => {
         if (questions.length && CODE_SESSION_KEY) {
@@ -124,6 +143,7 @@ function CodeSandboxPage() {
                 currentIndex,
                 code,
                 finished,
+                solvedCount: solvedCountRef.current,
             }));
         }
     }, [sessionId, questions, language, currentIndex, code, finished, CODE_SESSION_KEY]);
@@ -241,6 +261,7 @@ function CodeSandboxPage() {
             const result = await response.json();
 
             if (result.success) {
+                solvedCountRef.current += 1;
                 let outputText = "✓ All tests passed!\n\n";
                 result.test_results.forEach((test: TestResult) => {
                     outputText += `Test ${test.test_number}: ✓ PASSED\n`;
