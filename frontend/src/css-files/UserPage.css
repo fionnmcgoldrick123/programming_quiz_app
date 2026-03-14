@@ -241,6 +241,68 @@
     box-shadow: 0 4px 15px rgba(255, 85, 85, 0.3);
 }
 
+.stats-page-btn {
+    width: 100%;
+    padding: 13px 20px;
+    background: transparent;
+    color: #ff9500;
+    border: 1.5px solid rgba(255, 149, 0, 0.5);
+    border-radius: 8px;
+    font-family: 'Fira Code', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    letter-spacing: 0.3px;
+}
+
+.stats-page-btn:hover {
+    background: rgba(255, 149, 0, 0.08);
+    border-color: #ff9500;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(255, 149, 0, 0.2);
+}
+
+.stats-page-btn__bar {
+    display: flex;
+    gap: 2px;
+    align-items: flex-end;
+    height: 14px;
+}
+
+.stats-page-btn__bar::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 8px;
+    background: currentColor;
+    border-radius: 2px;
+}
+
+.stats-page-btn__bar::after {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 14px;
+    background: currentColor;
+    border-radius: 2px;
+    box-shadow: 5px 0 0 currentColor, -5px -6px 0 currentColor;
+}
+
+.stats-page-btn__arrow {
+    font-size: 1rem;
+    transition: transform 0.2s ease;
+}
+
+.stats-page-btn:hover .stats-page-btn__arrow {
+    transform: translateX(3px);
+}
+
 @media (max-width: 600px) {
     .profile-container {
         padding: 24px;

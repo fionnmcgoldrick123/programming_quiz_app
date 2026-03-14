@@ -6,7 +6,7 @@ Handles user registration, authentication, profile management, and XP/leveling s
 from fastapi import HTTPException
 from db import get_connection
 from auth import hash_password, verify_password, create_access_token
-from pydantic_models import RegisterRequest, LoginRequest
+from pydantic_models import RegisterRequest, LoginRequest, SaveQuizResultRequest
 
 
 async def user_exists(email: str) -> bool:
@@ -259,4 +259,150 @@ async def add_user_xp(user_id: int, xp_amount: int):
         "xp_gained": xp_amount,
         "leveled_up": leveled_up,
         "new_level": new_level if leveled_up else None,
+    }
+
+
+def _ensure_quiz_results_table():
+    """Create the quiz_results table if it doesn't exist."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS quiz_results (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    quiz_type VARCHAR(10) NOT NULL,
+                    total_questions INTEGER NOT NULL,
+                    correct_answers INTEGER NOT NULL DEFAULT 0,
+                    tags TEXT[] DEFAULT '{}',
+                    language VARCHAR(50),
+                    prompt TEXT,
+                    completed_at TIMESTAMP DEFAULT NOW()
+                );
+                """
+            )
+            # Migration: add prompt column if table pre-dates this field
+            cur.execute(
+                "ALTER TABLE quiz_results ADD COLUMN IF NOT EXISTS prompt TEXT;"
+            )
+            conn.commit()
+
+
+_ensure_quiz_results_table()
+
+
+async def save_quiz_result(user_id: int, data: SaveQuizResultRequest):
+    """Save a completed quiz result for the user."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO quiz_results (user_id, quiz_type, total_questions, correct_answers, tags, language, prompt)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id;
+                """,
+                (
+                    user_id,
+                    data.quiz_type,
+                    data.total_questions,
+                    data.correct_answers,
+                    data.tags,
+                    data.language,
+                    data.prompt,
+                ),
+            )
+            result = cur.fetchone()
+            conn.commit()
+    return {"message": "Quiz result saved", "id": result["id"]}
+
+
+async def get_user_stats(user_id: int):
+    """Return aggregated statistics for a user."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            # Overview counts
+            cur.execute(
+                """
+                SELECT
+                    COUNT(*) AS total_quizzes,
+                    COALESCE(SUM(total_questions), 0) AS total_questions,
+                    COALESCE(SUM(correct_answers), 0) AS total_correct,
+                    COALESCE(SUM(total_questions) - SUM(correct_answers), 0) AS total_wrong,
+                    COUNT(*) FILTER (WHERE quiz_type = 'mcq') AS mcq_quizzes,
+                    COUNT(*) FILTER (WHERE quiz_type = 'coding') AS coding_quizzes
+                FROM quiz_results
+                WHERE user_id = %s;
+                """,
+                (user_id,),
+            )
+            overview = cur.fetchone()
+
+            # Tag breakdown – unnest the tags array and count
+            cur.execute(
+                """
+                SELECT tag, COUNT(*) AS count
+                FROM (
+                    SELECT unnest(tags) AS tag
+                    FROM quiz_results
+                    WHERE user_id = %s
+                ) t
+                GROUP BY tag
+                ORDER BY count DESC
+                LIMIT 15;
+                """,
+                (user_id,),
+            )
+            tag_rows = cur.fetchall()
+
+            # Language breakdown (coding quizzes only)
+            cur.execute(
+                """
+                SELECT language, COUNT(*) AS count
+                FROM quiz_results
+                WHERE user_id = %s AND quiz_type = 'coding' AND language IS NOT NULL
+                GROUP BY language
+                ORDER BY count DESC;
+                """,
+                (user_id,),
+            )
+            lang_rows = cur.fetchall()
+
+            # Recent activity – last 10 quizzes
+            cur.execute(
+                """
+                SELECT quiz_type, total_questions, correct_answers, tags, language, prompt, completed_at
+                FROM quiz_results
+                WHERE user_id = %s
+                ORDER BY completed_at DESC
+                LIMIT 10;
+                """,
+                (user_id,),
+            )
+            recent_rows = cur.fetchall()
+
+    recent = []
+    for r in recent_rows:
+        recent.append(
+            {
+                "quiz_type": r["quiz_type"],
+                "total_questions": r["total_questions"],
+                "correct_answers": r["correct_answers"],
+                "tags": r["tags"] or [],
+                "language": r["language"],
+                "prompt": r["prompt"],
+                "completed_at": r["completed_at"].isoformat() if r["completed_at"] else None,
+            }
+        )
+
+    return {
+        "total_quizzes": overview["total_quizzes"],
+        "total_questions": overview["total_questions"],
+        "total_correct": overview["total_correct"],
+        "total_wrong": overview["total_wrong"],
+        "mcq_quizzes": overview["mcq_quizzes"],
+        "coding_quizzes": overview["coding_quizzes"],
+        "accuracy": round(overview["total_correct"] / overview["total_questions"] * 100, 1) if overview["total_questions"] else 0,
+        "tags": [{"name": r["tag"], "count": r["count"]} for r in tag_rows],
+        "languages": [{"name": r["language"], "count": r["count"]} for r in lang_rows],
+        "recent": recent,
     }

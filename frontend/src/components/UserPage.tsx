@@ -123,6 +123,12 @@ function UserPage() {
                         </div>
                     </div>
 
+                    <button className="stats-page-btn" onClick={() => navigate("/stats")}>
+                        <span className="stats-page-btn__bar"></span>
+                        View Statistics
+                        <span className="stats-page-btn__arrow">→</span>
+                    </button>
+
                     <button className="logout-btn" onClick={handleLogout}>
                         Logout
                     </button>
