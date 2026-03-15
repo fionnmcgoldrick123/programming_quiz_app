@@ -1,7 +1,7 @@
 from pydantic_models import QuizSchema, CodingQuestionSchema
-from quiz_metadata import compute_coding_metadata
-from difficulty_service import predict_difficulty_for_question
-from tag_service import predict_tags_for_question
+from ml.quiz_metadata import compute_coding_metadata
+from ml.difficulty_service import predict_difficulty_for_question
+from ml.tag_service import predict_tags_for_question
 import json
 
 

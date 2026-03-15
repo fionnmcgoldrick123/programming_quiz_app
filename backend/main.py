@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from config import CORS_ORIGINS, DEFAULT_MODEL, SUPPORTED_MODELS
 
 # Import authentication
-from auth import verify_token
+from core.auth import verify_token
 
 # Import Pydantic models
 from pydantic_models import (
@@ -26,9 +26,9 @@ from pydantic_models import (
 )
 
 # Import service modules
-from users import register_user, login_user, get_user_profile, add_user_xp, save_quiz_result, get_user_stats
-from ai_models import send_prompt_to_model
-from code_executor import run_code, submit_code
+from services.users import register_user, login_user, get_user_profile, add_user_xp, save_quiz_result, get_user_stats
+from services.ai_models import send_prompt_to_model
+from services.code_executor import run_code, submit_code
 
 # Initialize FastAPI app
 app = FastAPI()

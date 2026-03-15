@@ -17,7 +17,7 @@ import joblib
 import pandas as pd
 
 # ── Locate the model and the ml_models package ───────────────────────────────
-_BACKEND_DIR        = os.path.dirname(__file__)
+_BACKEND_DIR        = os.path.dirname(os.path.dirname(__file__))  # backend/ml/ -> backend/
 _ML_MODELS_DIR      = os.path.normpath(os.path.join(_BACKEND_DIR, "..", "ml_models"))
 _DIFFICULTY_DIR     = os.path.join(_ML_MODELS_DIR, "difficulty_classifier")
 _MODEL_PATH         = os.path.join(_DIFFICULTY_DIR, "difficulty_model.pkl")

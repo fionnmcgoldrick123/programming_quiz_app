@@ -5,7 +5,7 @@ Handles user registration, authentication, profile management, and XP/leveling s
 
 from fastapi import HTTPException
 from db import get_connection
-from auth import hash_password, verify_password, create_access_token
+from core.auth import hash_password, verify_password, create_access_token
 from pydantic_models import RegisterRequest, LoginRequest, SaveQuizResultRequest
 
 

@@ -12,7 +12,7 @@ import os
 import sys
 
 # Add the topic_classifier directory to sys.path so predict.py can be imported directly
-_BACKEND_DIR       = os.path.dirname(os.path.abspath(__file__))
+_BACKEND_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend/ml/ -> backend/
 _TOPIC_DIR         = os.path.normpath(os.path.join(_BACKEND_DIR, "..", "ml_models", "topic_classifier"))
 
 if _TOPIC_DIR not in sys.path:
