@@ -52,11 +52,9 @@ function CodeSandboxPage() {
     function getDefaultStub(lang: string): string {
         const lower = lang.toLowerCase();
         if (lower === "python") return "# Write your solution here\n\n";
-        if (lower === "java") return "// Write your solution here\n\npublic class Solution {\n    \n}\n";
-        if (lower === "c++" || lower === "cpp") return "// Write your solution here\n#include <iostream>\nusing namespace std;\n\n";
-        if (lower === "c#" || lower === "csharp") return "// Write your solution here\nusing System;\n\n";
-        if (lower === "go") return "package main\n\n// Write your solution here\n\n";
-        if (lower === "rust") return "// Write your solution here\n\nfn main() {\n    \n}\n";
+        if (lower === "java") return "public class Solution {\n    // Write your solution here\n    public int solve() {\n        return 0;\n    }\n}\n";
+        if (lower === "c#" || lower === "csharp") return "public class Solution {\n    // Write your solution here\n    public int Solve() {\n        return 0;\n    }\n}\n";
+        if (lower === "typescript") return "// Write your solution here\n\nfunction solve(): number {\n    return 0;\n}\n";
         return "// Write your solution here\n\n";
     }
 
@@ -160,10 +158,7 @@ function CodeSandboxPage() {
         "javascript": "javascript",
         "typescript": "typescript",
         "java": "java",
-        "c++": "cpp",
         "c#": "csharp",
-        "go": "go",
-        "rust": "rust",
     };
 
     const currentQ = questions[currentIndex];

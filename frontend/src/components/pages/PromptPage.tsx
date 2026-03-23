@@ -13,12 +13,7 @@ const programmingLanguages = [
     "Python",
     "TypeScript",
     "Java",
-    "C++",
     "C#",
-    "Go",
-    "Rust",
-    "Ruby",
-    "PHP",
 ];
 
 const models = [
