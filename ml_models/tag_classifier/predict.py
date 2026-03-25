@@ -1,138 +1,131 @@
 """
-Topic Classifier — Prediction Module
-======================================
-Provides a simple interface for loading the trained topic_model.pkl and
-running inference on new programming questions.
+Multi-Label Topic Classifier — Prediction Module
+==================================================
+Loads the trained multi-label model and predicts topic tags for
+coding questions. Returns multiple tags per question using
+per-label optimised thresholds from training.
 
 The trained pipeline expects a single combined string of
     "<title>. <problem_description>"
-as its input.  Two convenience functions are exposed:
+as input.
 
-  predict_topic(text)
-      Takes a single raw string and returns the predicted topic label.
+Functions:
+  predict_topics(text, top_n=5)
+      Returns a list of predicted tag strings.
 
-  predict_topic_from_parts(title, description)
-      Combines title + description in the same format used during training,
-      then calls predict_topic.  Use this from the backend service.
+  predict_topic_from_parts(title, description, top_n=5)
+      Combines title + description, then calls predict_topics.
 
-Usage example:
-    from ml_models.topic_classifier.predict import predict_topic_from_parts
-    tag = predict_topic_from_parts("Two Sum", "Given an array of integers...")
-    print(tag)   # -> "Array"
+Usage:
+    from ml_models.tag_classifier.predict import predict_topic_from_parts
+    tags = predict_topic_from_parts("Two Sum", "Given an array of integers...")
+    print(tags)   # -> ["Array", "Hash Table"]
 """
 
 import os
+import numpy as np
 import joblib
 
-# ── Locate the model file relative to this script ────────────────────────────
 _HERE = os.path.dirname(os.path.abspath(__file__))
 _MODEL_PATH = os.path.join(_HERE, "topic_model.pkl")
 
-# ── Module-level cache: load the model once, reuse on every call ─────────────
-# Deserialising a joblib pkl on every prediction would add unnecessary latency,
-# so we store the pipeline and class list in module globals after the first load.
-_pipeline = None
-_classes  = None
+_pipeline   = None
+_mlb        = None
+_thresholds = None
+_classes    = None
 
 
 def _load_model() -> None:
-    """
-    Load topic_model.pkl from disk into the module-level cache.
-    Called automatically on the first prediction; subsequent calls are no-ops.
-    Raises FileNotFoundError if the model has not been trained yet.
-    """
-    global _pipeline, _classes
+    """Load multi-label model from disk. Called once on first prediction."""
+    global _pipeline, _mlb, _thresholds, _classes
 
     if _pipeline is not None:
-        # Model already loaded — nothing to do
         return
 
     if not os.path.exists(_MODEL_PATH):
         raise FileNotFoundError(
             f"Topic model not found at '{_MODEL_PATH}'. "
-            "Run ml_models/topic_classifier/train.py first to generate it."
+            "Run ml_models/tag_classifier/train.py first."
         )
 
-    # joblib.load returns the dict saved by save_model() in train.py:
-    #   { "pipeline": <sklearn Pipeline>, "classes": [list of label strings] }
-    payload    = joblib.load(_MODEL_PATH)
-    _pipeline  = payload["pipeline"]
-    _classes   = payload["classes"]
-    print(f"[topic_classifier] Model loaded — {len(_classes)} classes: {_classes}")
+    payload = joblib.load(_MODEL_PATH)
+
+    if "mlb" not in payload:
+        raise FileNotFoundError(
+            "Old single-label model format detected. "
+            "Please retrain: python ml_models/tag_classifier/train.py"
+        )
+
+    _pipeline   = payload["pipeline"]
+    _mlb        = payload["mlb"]
+    _thresholds = payload["thresholds"]
+    _classes    = payload["classes"]
+    print(f"[topic_classifier] Multi-label model loaded — {len(_classes)} labels")
+
+
+def predict_topics(text: str, top_n: int = 5) -> list:
+    """
+    Predict topic tags for a coding question.
+
+    Uses per-label optimised thresholds from training.
+    Always returns at least one tag (the highest confidence one).
+    Returns at most top_n tags, ranked by confidence.
+
+    Parameters
+    ----------
+    text  : str — Combined "<title>. <description>" string.
+    top_n : int — Maximum number of tags to return (default 5).
+
+    Returns
+    -------
+    list[str] — Predicted tag names, e.g. ["Array", "Hash Table"].
+    """
+    _load_model()
+
+    proba = _pipeline.predict_proba([text])[0]
+    thresh_array = np.array([_thresholds[c] for c in _mlb.classes_])
+    predictions = proba >= thresh_array
+
+    # Guarantee at least one tag
+    if not predictions.any():
+        predictions[proba.argmax()] = True
+
+    # Get predicted tags sorted by confidence (highest first)
+    indices = np.where(predictions)[0]
+    indices_sorted = indices[np.argsort(proba[indices])[::-1]]
+
+    # Limit to top_n
+    if len(indices_sorted) > top_n:
+        indices_sorted = indices_sorted[:top_n]
+
+    tags = [_mlb.classes_[i] for i in indices_sorted]
+    return tags
 
 
 def predict_topic(text: str) -> str:
+    """Backward-compatible: returns the single highest-confidence tag."""
+    tags = predict_topics(text, top_n=1)
+    return tags[0] if tags else ""
+
+
+def predict_topic_from_parts(title: str, description: str, top_n: int = 5) -> list:
     """
-    Predict the primary algorithmic topic for a single question text string.
+    Predict topic tags from separate title and description strings.
 
     Parameters
     ----------
-    text : str
-        A combined string of the form "<title>. <problem description>", or
-        just the problem description on its own.  Longer, richer text will
-        produce more confident predictions.
+    title       : str — Question title, e.g. "Two Sum"
+    description : str — Full problem description text
+    top_n       : int — Maximum tags to return (default 5)
 
     Returns
     -------
-    str
-        The predicted topic label, e.g. "Array", "Dynamic Programming",
-        "Hash Table", "String", etc.
+    list[str] — Predicted tag names.
     """
-    # Lazy-load the model on first call
-    _load_model()
-
-    print("\n" + "="*80)
-    print("[TAG_PREDICTOR] PREDICTION: STARTING")
-    print("="*80)
-
-    print(f"\n  [STEP 1] Input Text")
-    print(f"    • Length : {len(text)} chars")
-    print(f"    • Preview: \"{text[:100].replace(chr(10), ' ')}{'...' if len(text) > 100 else ''}\"")
-
-    print(f"\n  [STEP 2] Running Model Inference")
-    # pipeline.predict expects a list/array of strings, not a bare string.
-    # We wrap in a list and unpack the single result.
-    prediction = _pipeline.predict([text])
-    result = prediction[0]
-    print(f"    • Raw prediction: {result}")
-
-    print(f"\n" + "="*80)
-    print(f"[TAG_PREDICTOR] PREDICTION: {result}")
-    print("="*80 + "\n")
-
-    return result
-
-
-def predict_topic_from_parts(title: str, description: str) -> str:
-    """
-    Predict the primary topic from separate title and description strings.
-
-    This function mirrors the feature-engineering step in train.py so that
-    inference uses exactly the same input format as training:
-
-        "<title>. <problem_description>"
-
-    Parameters
-    ----------
-    title       : str  — Question title, e.g. "Two Sum"
-    description : str  — Full problem description text
-
-    Returns
-    -------
-    str
-        Predicted topic label.
-    """
-    print(f"\n  [TAG_PREDICTOR] Input Parts")
-    print(f"    • Title      : {title.strip()[:80]}")
-    print(f"    • Desc length: {len(description.strip())} chars")
-    # Replicate the text combination used in load_and_clean() in train.py
     combined = f"{title.strip()}. {description.strip()}"
-    return predict_topic(combined)
+    return predict_topics(combined, top_n=top_n)
 
 
-# ── Quick standalone test ─────────────────────────────────────────────────────
-# Run this file directly to verify the model loads and predicts correctly:
-#   python ml_models/topic_classifier/predict.py
 if __name__ == "__main__":
     test_cases = [
         (
@@ -157,8 +150,8 @@ if __name__ == "__main__":
         ),
     ]
 
-    print("Running prediction tests...\n")
+    print("Running multi-label prediction tests...\n")
     for title, desc in test_cases:
-        tag = predict_topic_from_parts(title, desc)
+        tags = predict_topic_from_parts(title, desc)
         print(f"  Title      : {title}")
-        print(f"  Prediction : {tag}\n")
+        print(f"  Tags       : {tags}\n")

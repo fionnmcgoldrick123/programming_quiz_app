@@ -11,9 +11,9 @@ Dynamic Programming, Graph, etc.
 import os
 import sys
 
-# Add the topic_classifier directory to sys.path so predict.py can be imported directly
+# Add the tag_classifier directory to sys.path so predict.py can be imported directly
 _BACKEND_DIR       = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))  # backend/ml/ -> backend/
-_TOPIC_DIR         = os.path.normpath(os.path.join(_BACKEND_DIR, "..", "ml_models", "topic_classifier"))
+_TOPIC_DIR         = os.path.normpath(os.path.join(_BACKEND_DIR, "..", "ml_models", "tag_classifier"))
 
 if _TOPIC_DIR not in sys.path:
     sys.path.insert(0, _TOPIC_DIR)
@@ -36,10 +36,10 @@ except Exception as e:
 def predict_tags_for_question(
     title: str, 
     description: str, 
-    top_n: int = 1
+    top_n: int = 5
 ) -> list:
     """
-    Predict the primary algorithmic topic(s) for a question.
+    Predict algorithmic topic(s) for a question using the multi-label classifier.
     
     Parameters
     ----------
@@ -48,29 +48,19 @@ def predict_tags_for_question(
     description : str
         The question description/problem statement.
     top_n : int, optional
-        Number of top predictions to return. Default is 1.
-        (Currently the model returns one prediction; top_n is for future extension)
+        Maximum number of predicted tags to return. Default is 5.
     
     Returns
     -------
     list[str]
-        A list of predicted topic tags, e.g., ["Array"] or ["Dynamic Programming"].
+        A list of predicted topic tags, e.g., ["Array", "Hash Table"].
         Returns an empty list if the predictor is unavailable.
-    
-    Examples
-    --------
-    >>> predict_tags_for_question("Two Sum", "Given an array of integers...")
-    ["Array"]
-    
-    >>> predict_tags_for_question("Fibonacci", "Find the nth Fibonacci number...")
-    ["Dynamic Programming"]
     """
     if not PREDICTOR_AVAILABLE:
         return []
     
     try:
-        predicted_topic = predict_topic_from_parts(title, description)
-        return [predicted_topic] if predicted_topic else []
+        return predict_topic_from_parts(title, description, top_n=top_n)
     except Exception as e:
         print(f"[ERROR] Tag prediction failed: {e}")
         return []
