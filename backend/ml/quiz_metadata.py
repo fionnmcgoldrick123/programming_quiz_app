@@ -57,7 +57,7 @@ def compute_coding_metadata(question: str, starter_code: str, test_cases: list[s
 
     num_large_numbers = large_count
 
-    # Rough code token count: split on whitespace and common delimiters
+    # Approximate code token count: split on whitespace and common delimiters.
     code_tokens = re.split(r"[\s\(\)\[\]{},;:.=+\-*/!<>\"'\\]+", starter_code)
     num_code_tokens = len([t for t in code_tokens if t])
 

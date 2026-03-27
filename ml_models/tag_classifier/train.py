@@ -424,7 +424,8 @@ def optimize_thresholds(pipeline, X_val, Y_val, mlb):
         is more willing to predict them when there is reasonable evidence
 
     Falls back to 0.5 for all labels if the pipeline does not support
-    predict_proba (should not happen with our model choices).
+    predict_proba (this should not occur given the pipeline configurations
+    defined in this module).
     """
     print("\n" + "=" * 65)
     print("SECTION 4 — PER-LABEL THRESHOLD OPTIMISATION")

@@ -27,7 +27,7 @@ function AboutPage() {
                 </div>
             </section>
 
-            {/* WHAT WE OFFER */}
+            {/* PLATFORM FEATURES */}
             <section className="about-section about-section-alt">
                 <div className="about-section-inner">
                     <div className="about-section-header">

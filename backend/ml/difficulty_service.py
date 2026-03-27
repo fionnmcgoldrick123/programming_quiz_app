@@ -22,7 +22,7 @@ _ML_MODELS_DIR      = os.path.normpath(os.path.join(_BACKEND_DIR, "..", "ml_mode
 _DIFFICULTY_DIR     = os.path.join(_ML_MODELS_DIR, "difficulty_classifier")
 _MODEL_PATH         = os.path.join(_DIFFICULTY_DIR, "difficulty_model.pkl")
 
-# Add difficulty_classifier dir to sys.path so we can import difficulty_predictor
+# Add difficulty_classifier dir to sys.path to allow importing difficulty_predictor.
 if _DIFFICULTY_DIR not in sys.path:
     sys.path.insert(0, _DIFFICULTY_DIR)
 
@@ -37,9 +37,9 @@ try:
     # ── Joblib pickle fix ─────────────────────────────────────────────────────
     # The pipeline was pickled while difficulty_predictor.py ran as __main__, so
     # joblib stored _squeeze_array / _to_dense under the '__main__' namespace.
-    # We inject them back into __main__ here so joblib.load() can resolve them.
+    # These are injected back into __main__ here so joblib.load() can resolve them.
     #
-    # We also redefine _squeeze_array to use np.atleast_1d so that a single-row
+    # _squeeze_array is also redefined to use np.atleast_1d so that a single-row
     # DataFrame text column is never squeezed to a scalar string, which would
     # cause the TF-IDF vectorizer to fail with "string object received".
     import numpy as _np

@@ -7,13 +7,13 @@ import pytest
 from fastapi.testclient import TestClient
 
 
-# Example test - you can add actual tests based on your endpoints
+# Example test — additional tests should be added to cover API endpoints.
 def test_example():
     """Basic test example."""
     assert 1 + 1 == 2
 
 
-# Uncomment when you want to test actual endpoints
+# Uncomment the block below to test actual API endpoints.
 # from main import app
 # client = TestClient(app)
 #
@@ -23,6 +23,6 @@ def test_example():
 #     assert response.status_code == 200
 #
 # def test_health_check():
-#     """Test health check endpoint if you have one."""
+#     """Test the health check endpoint."""
 #     response = client.get("/health")
 #     assert response.status_code == 200
