@@ -3,6 +3,7 @@ Main FastAPI application.
 Routes requests to appropriate modules for handling.
 """
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from config import CORS_ORIGINS, DEFAULT_MODEL, SUPPORTED_MODELS
@@ -19,11 +20,18 @@ from pydantic_models import (
     SaveQuizResultRequest,
 )
 
-from services.users import register_user, login_user, get_user_profile, add_user_xp, save_quiz_result, get_user_stats
+from services.users import register_user, login_user, get_user_profile, add_user_xp, save_quiz_result, get_user_stats, init_db
 from services.ai_models import send_prompt_to_model
 from services.code_executor import run_code, submit_code
 
-app = FastAPI()
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 current_model = DEFAULT_MODEL
 

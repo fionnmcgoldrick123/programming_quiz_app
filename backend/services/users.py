@@ -257,6 +257,28 @@ async def add_user_xp(user_id: int, xp_amount: int):
     }
 
 
+def _ensure_users_table():
+    """Create the users table if it doesn't exist."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    first_name VARCHAR(100) NOT NULL,
+                    second_name VARCHAR(100) NOT NULL,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    exp INTEGER DEFAULT 0,
+                    level INTEGER DEFAULT 1,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                );
+                """
+            )
+            conn.commit()
+
+
 def _ensure_quiz_results_table():
     """Create the quiz_results table if it doesn't exist."""
     with get_connection() as conn:
@@ -276,14 +298,16 @@ def _ensure_quiz_results_table():
                 );
                 """
             )
-            # Migration: add prompt column if table pre-dates this field
             cur.execute(
                 "ALTER TABLE quiz_results ADD COLUMN IF NOT EXISTS prompt TEXT;"
             )
             conn.commit()
 
 
-_ensure_quiz_results_table()
+def init_db():
+    """Initialise all database tables in dependency order."""
+    _ensure_users_table()
+    _ensure_quiz_results_table()
 
 
 async def save_quiz_result(user_id: int, data: SaveQuizResultRequest):
