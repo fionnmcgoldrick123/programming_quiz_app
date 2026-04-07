@@ -388,3 +388,237 @@
         gap: 4px;
     }
 }
+
+/* ---- Avatar image ---- */
+.avatar-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+
+/* ---- Profile extras ---- */
+.profile-realname {
+    color: #808080;
+    font-size: 0.85em;
+    margin: 0 0 4px;
+}
+
+.profile-bio {
+    color: #c0c0c0;
+    font-size: 0.9em;
+    margin: 8px 0 0;
+    line-height: 1.5;
+    max-width: 420px;
+    text-align: center;
+}
+
+.edit-profile-btn {
+    margin-top: 14px;
+    padding: 8px 22px;
+    background: transparent;
+    color: #ff9500;
+    border: 1.5px solid rgba(255, 149, 0, 0.5);
+    border-radius: 8px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.85em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.edit-profile-btn:hover {
+    background: rgba(255, 149, 0, 0.1);
+    border-color: #ff9500;
+}
+
+/* ---- Edit Profile Modal ---- */
+.edit-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 20px;
+}
+
+.edit-modal {
+    background: #2d2d2d;
+    border: 1.5px solid #404040;
+    border-radius: 16px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 480px;
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+    font-family: 'Fira Code', monospace;
+}
+
+.edit-modal__title {
+    color: #ff9500;
+    font-size: 1.4em;
+    margin: 0 0 24px;
+}
+
+.edit-modal__avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    margin-bottom: 24px;
+}
+
+.edit-modal__avatar-preview {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ff9500, #ff7700);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8em;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+    overflow: hidden;
+}
+
+.edit-modal__avatar-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.edit-modal__upload-btn {
+    padding: 7px 16px;
+    background: rgba(255, 149, 0, 0.15);
+    color: #ff9500;
+    border: 1px solid rgba(255, 149, 0, 0.4);
+    border-radius: 6px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.82em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.edit-modal__upload-btn:hover {
+    background: rgba(255, 149, 0, 0.25);
+}
+
+.edit-modal__remove-btn {
+    padding: 6px 14px;
+    background: transparent;
+    color: #ff5555;
+    border: 1px solid rgba(255, 85, 85, 0.4);
+    border-radius: 6px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.8em;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.edit-modal__remove-btn:hover {
+    background: rgba(255, 85, 85, 0.1);
+}
+
+.edit-modal__avatar-hint {
+    color: #606060;
+    font-size: 0.75em;
+    margin: 0;
+}
+
+.edit-modal__label {
+    display: block;
+    color: #a0a0a0;
+    font-size: 0.85em;
+    margin-bottom: 6px;
+}
+
+.edit-modal__sublabel {
+    color: #606060;
+    font-size: 0.9em;
+}
+
+.edit-modal__input,
+.edit-modal__textarea {
+    width: 100%;
+    background: #1e1e1e;
+    border: 1.5px solid #404040;
+    border-radius: 8px;
+    color: #e0e0e0;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.9em;
+    padding: 10px 14px;
+    margin-bottom: 18px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+}
+
+.edit-modal__input:focus,
+.edit-modal__textarea:focus {
+    border-color: #ff9500;
+}
+
+.edit-modal__error {
+    color: #ff5555;
+    font-size: 0.85em;
+    margin: 0 0 12px;
+}
+
+.edit-modal__success {
+    color: #4caf50;
+    font-size: 0.9em;
+    font-weight: 600;
+    margin: 0 0 12px;
+    text-align: center;
+}
+
+.edit-modal__actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 4px;
+}
+
+.edit-modal__cancel {
+    padding: 10px 22px;
+    background: transparent;
+    color: #808080;
+    border: 1.5px solid #404040;
+    border-radius: 8px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.88em;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+}
+
+.edit-modal__cancel:hover {
+    border-color: #606060;
+    color: #c0c0c0;
+}
+
+.edit-modal__save {
+    padding: 10px 22px;
+    background: linear-gradient(135deg, #ff9500, #ff7700);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.88em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.edit-modal__save:hover:not(:disabled) {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.edit-modal__save:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+

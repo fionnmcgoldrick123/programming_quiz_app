@@ -20,6 +20,9 @@ interface ProfileData {
     created_at: string | null;
     friendship_status: "none" | "friends" | "request_sent" | "request_received";
     friend_count: number;
+    display_name: string | null;
+    bio: string | null;
+    avatar_url: string | null;
 }
 
 interface TagStat { name: string; count: number; }
@@ -199,13 +202,21 @@ function PublicProfilePage() {
                     {/* Profile Card */}
                     <div className="pub-profile-card">
                         <div className="pub-avatar">
-                            {profile.first_name.charAt(0).toUpperCase()}
-                            {profile.second_name.charAt(0).toUpperCase()}
+                            {profile.avatar_url
+                                ? <img src={profile.avatar_url} alt="avatar" className="pub-avatar-img" />
+                                : <>{profile.first_name.charAt(0).toUpperCase()}{profile.second_name.charAt(0).toUpperCase()}</>
+                            }
                         </div>
-                        <h1 className="pub-name">{profile.first_name} {profile.second_name}</h1>
+                        <h1 className="pub-name">
+                            {profile.display_name ?? `${profile.first_name} ${profile.second_name}`}
+                        </h1>
+                        {profile.display_name && (
+                            <p className="pub-realname">{profile.first_name} {profile.second_name}</p>
+                        )}
                         {profile.friendship_status === "friends" && (
                             <p className="pub-email">{profile.email}</p>
                         )}
+                        {profile.bio && <p className="pub-bio">{profile.bio}</p>}
 
                         <div className="pub-meta-row">
                             <div className="pub-meta-item">

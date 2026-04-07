@@ -11,6 +11,8 @@ interface UserResult {
     email: string;
     level: number;
     exp: number;
+    display_name: string | null;
+    avatar_url: string | null;
     created_at: string | null;
 }
 
@@ -250,11 +252,14 @@ function SocialPage() {
                                 {searchResults.map((u) => (
                                     <div key={u.id} className="social-user-card" onClick={() => navigate(`/user/${u.id}`)}>
                                         <div className="social-user-avatar">
-                                            {u.first_name.charAt(0).toUpperCase()}
-                                            {u.second_name.charAt(0).toUpperCase()}
+                                            {u.avatar_url
+                                                ? <img src={u.avatar_url} alt="avatar" className="social-avatar-img" />
+                                                : <>{u.first_name.charAt(0).toUpperCase()}{u.second_name.charAt(0).toUpperCase()}</>
+                                            }
                                         </div>
                                         <div className="social-user-info">
-                                            <span className="social-user-name">{u.first_name} {u.second_name}</span>
+                                            <span className="social-user-name">{u.display_name ?? `${u.first_name} ${u.second_name}`}</span>
+                                            {u.display_name && <span className="social-user-realname">{u.first_name} {u.second_name}</span>}
                                             <span className="social-user-meta">Level {u.level}</span>
                                         </div>
                                         <div className="social-user-arrow">→</div>

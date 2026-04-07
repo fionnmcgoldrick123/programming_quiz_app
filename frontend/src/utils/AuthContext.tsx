@@ -10,6 +10,9 @@ interface User {
     exp: number;
     level: number;
     xp_required: number;
+    display_name: string | null;
+    bio: string | null;
+    avatar_url: string | null;
     created_at: string | null;
     updated_at: string | null;
 }

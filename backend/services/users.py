@@ -6,7 +6,7 @@ Handles user registration, authentication, profile management, and XP/leveling s
 from fastapi import HTTPException
 from db import get_connection
 from core.auth import hash_password, verify_password, create_access_token
-from pydantic_models import RegisterRequest, LoginRequest, SaveQuizResultRequest, FriendRequestAction
+from pydantic_models import RegisterRequest, LoginRequest, SaveQuizResultRequest, FriendRequestAction, UpdateProfileRequest
 
 
 async def user_exists(email: str) -> bool:
@@ -82,7 +82,8 @@ async def login_user(login_data: LoginRequest):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, first_name, second_name, email, password_hash, exp, level, created_at, updated_at
+                SELECT id, first_name, second_name, email, password_hash, exp, level,
+                       display_name, bio, avatar_url, created_at, updated_at
                 FROM users
                 WHERE email = %s
                 LIMIT 1;
@@ -109,6 +110,9 @@ async def login_user(login_data: LoginRequest):
             "exp": user["exp"],
             "level": user["level"],
             "xp_required": xp_for_level(user["level"]),
+            "display_name": user["display_name"],
+            "bio": user["bio"],
+            "avatar_url": user["avatar_url"],
             "created_at": (
                 user["created_at"].isoformat() if user["created_at"] else None
             ),
@@ -136,7 +140,8 @@ async def get_user_profile(user_id: int):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, first_name, second_name, email, exp, level, created_at, updated_at
+                SELECT id, first_name, second_name, email, exp, level,
+                       display_name, bio, avatar_url, created_at, updated_at
                 FROM users
                 WHERE id = %s
                 LIMIT 1;
@@ -156,21 +161,70 @@ async def get_user_profile(user_id: int):
         "exp": user["exp"],
         "level": user["level"],
         "xp_required": xp_for_level(user["level"]),
+        "display_name": user["display_name"],
+        "bio": user["bio"],
+        "avatar_url": user["avatar_url"],
         "created_at": user["created_at"].isoformat() if user["created_at"] else None,
         "updated_at": user["updated_at"].isoformat() if user["updated_at"] else None,
     }
 
 
+async def update_user_profile(user_id: int, data: UpdateProfileRequest):
+    """Update a user's display name, bio, and/or avatar."""
+    fields = []
+    values = []
+
+    if data.display_name is not None:
+        fields.append("display_name = %s")
+        values.append(data.display_name)
+    if data.bio is not None:
+        fields.append("bio = %s")
+        values.append(data.bio)
+    if data.avatar_url is not None:
+        fields.append("avatar_url = %s")
+        values.append(data.avatar_url)
+
+    if not fields:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    fields.append("updated_at = NOW()")
+    values.append(user_id)
+
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                f"""
+                UPDATE users
+                SET {', '.join(fields)}
+                WHERE id = %s
+                RETURNING id, first_name, second_name, email, exp, level,
+                          display_name, bio, avatar_url, created_at, updated_at;
+                """,
+                values,
+            )
+            updated = cur.fetchone()
+            if not updated:
+                raise HTTPException(status_code=404, detail="User not found")
+            conn.commit()
+
+    return {
+        "id": updated["id"],
+        "first_name": updated["first_name"],
+        "second_name": updated["second_name"],
+        "email": updated["email"],
+        "exp": updated["exp"],
+        "level": updated["level"],
+        "xp_required": xp_for_level(updated["level"]),
+        "display_name": updated["display_name"],
+        "bio": updated["bio"],
+        "avatar_url": updated["avatar_url"],
+        "created_at": updated["created_at"].isoformat() if updated["created_at"] else None,
+        "updated_at": updated["updated_at"].isoformat() if updated["updated_at"] else None,
+    }
+
+
 def xp_for_level(level: int) -> int:
-    """
-    Calculate XP required to advance from the given level.
-
-    Args:
-        level (int): The current level.
-
-    Returns:
-        int: XP required to reach the next level.
-    """
+    """Calculate XP required to advance from the given level."""
     return 100 * level  # Level 1: 100, Level 2: 200, Level 3: 300 ...
 
 
@@ -271,11 +325,18 @@ def _ensure_users_table():
                     password_hash TEXT NOT NULL,
                     exp INTEGER DEFAULT 0,
                     level INTEGER DEFAULT 1,
+                    display_name VARCHAR(30) DEFAULT NULL,
+                    bio VARCHAR(300) DEFAULT NULL,
+                    avatar_url TEXT DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT NOW(),
                     updated_at TIMESTAMP DEFAULT NOW()
                 );
                 """
             )
+            # Migrations for existing tables that pre-date these columns
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS display_name VARCHAR(30) DEFAULT NULL;")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS bio VARCHAR(300) DEFAULT NULL;")
+            cur.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_url TEXT DEFAULT NULL;")
             conn.commit()
 
 
@@ -456,7 +517,8 @@ async def search_users(query: str, current_user_id: int):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, first_name, second_name, email, level, exp, created_at
+                SELECT id, first_name, second_name, email, level, exp,
+                       display_name, avatar_url, created_at
                 FROM users
                 WHERE id != %s
                   AND (
@@ -480,6 +542,8 @@ async def search_users(query: str, current_user_id: int):
             "email": u["email"],
             "level": u["level"],
             "exp": u["exp"],
+            "display_name": u["display_name"],
+            "avatar_url": u["avatar_url"],
             "created_at": u["created_at"].isoformat() if u["created_at"] else None,
         }
         for u in users
@@ -492,7 +556,8 @@ async def get_public_profile(target_user_id: int, current_user_id: int):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT id, first_name, second_name, email, level, exp, created_at
+                SELECT id, first_name, second_name, email, level, exp,
+                       display_name, bio, avatar_url, created_at
                 FROM users
                 WHERE id = %s;
                 """,
@@ -546,6 +611,9 @@ async def get_public_profile(target_user_id: int, current_user_id: int):
         "level": user["level"],
         "exp": user["exp"],
         "xp_required": xp_for_level(user["level"]),
+        "display_name": user["display_name"],
+        "bio": user["bio"],
+        "avatar_url": user["avatar_url"],
         "created_at": user["created_at"].isoformat() if user["created_at"] else None,
         "friendship_status": friendship_status,
         "friend_count": friend_count,

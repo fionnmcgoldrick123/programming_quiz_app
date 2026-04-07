@@ -19,6 +19,7 @@ from pydantic_models import (
     McqHintRequest,
     SaveQuizResultRequest,
     FriendRequestAction,
+    UpdateProfileRequest,
 )
 
 from services.users import (
@@ -27,7 +28,7 @@ from services.users import (
     search_users, get_public_profile, send_friend_request,
     respond_to_friend_request, get_friend_requests, get_friends_list,
     remove_friend, get_friend_count, get_pending_request_count,
-    get_user_stats_public,
+    get_user_stats_public, update_user_profile,
 )
 from services.ai_models import send_prompt_to_model
 from services.code_executor import run_code, submit_code
@@ -148,6 +149,12 @@ async def get_current_user(token_data: dict = Depends(verify_token)):
         dict: User profile data.
     """
     return await get_user_profile(token_data["user_id"])
+
+
+@app.patch("/me/profile")
+async def update_profile(data: UpdateProfileRequest, token_data: dict = Depends(verify_token)):
+    """Update the authenticated user's display name, bio, and/or avatar."""
+    return await update_user_profile(token_data["user_id"], data)
 
 
 # --- User XP Endpoints ---

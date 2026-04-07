@@ -1,5 +1,5 @@
 from typing import List, Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime
 
 
@@ -98,6 +98,31 @@ class SaveQuizResultRequest(BaseModel):
 
 class FriendRequestAction(BaseModel):
     friendship_id: int
+
+
+class UpdateProfileRequest(BaseModel):
+    display_name: Optional[str] = None
+    bio: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+    @field_validator("display_name")
+    @classmethod
+    def validate_display_name(cls, v):
+        if v is None:
+            return v
+        v = v.strip()
+        if len(v) < 3 or len(v) > 30:
+            raise ValueError("Display name must be between 3 and 30 characters")
+        return v
+
+    @field_validator("bio")
+    @classmethod
+    def validate_bio(cls, v):
+        if v is None:
+            return v
+        if len(v) > 300:
+            raise ValueError("Bio must be 300 characters or fewer")
+        return v
     action: str  # "accept" or "reject"
 
 
