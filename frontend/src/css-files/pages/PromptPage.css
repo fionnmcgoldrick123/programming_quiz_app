@@ -171,23 +171,23 @@
 
 /* Quiz Type Cards */
 .quiz-type-cards {
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
-    flex-wrap: wrap;
     margin: 0 auto;
+    width: 100%;
+    max-width: 900px;
 }
 
 .quiz-card {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 14px;
-    padding: 14px 18px;
+    gap: 10px;
+    padding: 6px 18px;
     height: auto;
-    min-height: 72px;
-    width: min(100%, 320px);
+    min-height: 48px;
+    width: 100%;
     background-color: #1e1e1e;
     border: 2px solid #3d3d3d;
     border-radius: 16px;
@@ -212,8 +212,8 @@
 }
 
 .quiz-card-icon {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -244,11 +244,11 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
 .quiz-card-content h3 {
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 600;
     color: #ff9500;
     margin: 0;
@@ -257,14 +257,14 @@
 .quiz-card-content p {
     display: block;
     margin: 0;
-    font-size: 0.78rem;
-    line-height: 1.4;
+    font-size: 0.72rem;
+    line-height: 1.25;
     color: #9a9a9a;
 }
 
 .quiz-card-check {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border: 2px solid #4d4d4d;
     border-radius: 50%;
     display: flex;
@@ -280,10 +280,10 @@
 }
 
 .checkmark {
-    width: 10px;
-    height: 6px;
-    border-left: 2px solid #1a1a1a;
-    border-bottom: 2px solid #1a1a1a;
+    width: 8px;
+    height: 5px;
+    border-left: 1.5px solid #1a1a1a;
+    border-bottom: 1.5px solid #1a1a1a;
     transform: rotate(-45deg);
 }
 
@@ -558,12 +558,10 @@
     }
 
     .quiz-type-cards {
-        flex-direction: column;
-        align-items: stretch;
+        grid-template-columns: 1fr;
     }
 
     .quiz-card {
-        width: 100%;
         text-align: left;
     }
 
