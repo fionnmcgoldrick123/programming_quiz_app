@@ -15,6 +15,14 @@ interface QuizQuestion {
     topic_tags?: string[];
 }
 
+interface QuestionResult {
+    question: string;
+    options: string[];
+    correct_answer: string;
+    userAnswer: string | null;
+    isCorrect: boolean;
+}
+
 const quizSessionKey = (userId: number) => `quizPageSession_${userId}`;
 
 function QuizPage() {
@@ -79,6 +87,8 @@ function QuizPage() {
     const [levelUpInfo, setLevelUpInfo] = useState<{ show: boolean; newLevel: number | null }>({ show: false, newLevel: null });
 
     const correctCountRef = useRef(isFreshQuiz ? 0 : (savedSession?.correctCount ?? 0));
+    const startTimeRef = useRef<number>(isFreshQuiz ? Date.now() : (savedSession?.startTime ?? Date.now()));
+    const questionResultsRef = useRef<QuestionResult[]>(isFreshQuiz ? [] : (savedSession?.questionResults ?? []));
 
     useEffect(() => {
         if (quiz.length && QUIZ_SESSION_KEY) {
@@ -90,6 +100,8 @@ function QuizPage() {
                 totalXpEarned,
                 correctCount: correctCountRef.current,
                 quizPrompt,
+                startTime: startTimeRef.current,
+                questionResults: questionResultsRef.current,
             }));
         }
     }, [sessionId, quiz, currentIndex, finished, totalXpEarned, QUIZ_SESSION_KEY, quizPrompt]);
@@ -183,6 +195,15 @@ function QuizPage() {
         setSelectedAnswer(index);
         setCorrectAnswerIndex(correctIdx);
 
+        // Track question result
+        questionResultsRef.current.push({
+            question: currentQ.question,
+            options: currentQ.options,
+            correct_answer: currentQ.correct_answer,
+            userAnswer: letterFromIndex,
+            isCorrect: isCorrect,
+        });
+
         if (isCorrect) {
             correctCountRef.current += 1;
             setShowXpAnimation(true);
@@ -245,18 +266,42 @@ function QuizPage() {
     );
 
     if (finished) {
+        const timeTakenMs = Date.now() - startTimeRef.current;
+        const timeTakenSecs = Math.floor(timeTakenMs / 1000);
+        const minutes = Math.floor(timeTakenSecs / 60);
+        const seconds = timeTakenSecs % 60;
+        const timeString = minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+        const accuracy = quiz.length > 0 ? Math.round((correctCountRef.current / quiz.length) * 100) : 0;
+
         return (
             <>
                 <div className="quiz-page">
                     <Navbar />
                     {headerBar}
                     <div className="quiz-body">
+                        {/* Summary Card */}
                         <div className="quiz-card quiz-complete">
                             <div className="quiz-complete__badge">✓</div>
                             <h1 className="quiz-complete__title">Quiz Complete!</h1>
-                            <p className="quiz-complete__text">
-                                Great job! You've completed all {quiz.length} questions.
-                            </p>
+                            
+                            {/* Summary Stats */}
+                            <div className="quiz-results__summary">
+                                <div className="quiz-results__stat">
+                                    <span className="quiz-results__stat-label">Score</span>
+                                    <span className="quiz-results__stat-value">
+                                        {correctCountRef.current}/{quiz.length}
+                                    </span>
+                                </div>
+                                <div className="quiz-results__stat">
+                                    <span className="quiz-results__stat-label">Accuracy</span>
+                                    <span className="quiz-results__stat-value">{accuracy}%</span>
+                                </div>
+                                <div className="quiz-results__stat">
+                                    <span className="quiz-results__stat-label">Time Taken</span>
+                                    <span className="quiz-results__stat-value">{timeString}</span>
+                                </div>
+                            </div>
+
                             <div className="quiz-complete__xp-box">
                                 <span>+{totalXpEarned} XP Earned!</span>
                             </div>
@@ -264,6 +309,53 @@ function QuizPage() {
                             <button className="quiz-btn-primary" onClick={handleQuitQuiz}>
                                 Create Another Quiz
                             </button>
+                        </div>
+
+                        {/* Per-Question Review */}
+                        <div className="quiz-results__review">
+                            <h2 className="quiz-results__review-title">Review</h2>
+                            {questionResultsRef.current.map((result, i) => (
+                                <div 
+                                    key={i} 
+                                    className={`quiz-results__question ${
+                                        result.isCorrect ? 'quiz-results__question--correct' : 'quiz-results__question--incorrect'
+                                    }`}
+                                >
+                                    <div className="quiz-results__question-header">
+                                        <span className="quiz-results__question-number">
+                                            Question {i + 1}
+                                        </span>
+                                        <span className={`quiz-results__question-badge ${
+                                            result.isCorrect ? 'quiz-results__question-badge--correct' : 'quiz-results__question-badge--incorrect'
+                                        }`}>
+                                            {result.isCorrect ? '✓ Correct' : '✗ Incorrect'}
+                                        </span>
+                                    </div>
+                                    <p className="quiz-results__question-text">{result.question}</p>
+                                    <div className="quiz-results__options">
+                                        {result.options.map((opt, optIdx) => {
+                                            const letter = ["A", "B", "C", "D"][optIdx];
+                                            let optClass = "quiz-results__option";
+                                            
+                                            if (letter === result.correct_answer) {
+                                                optClass += " quiz-results__option--correct-answer";
+                                            } else if (letter === result.userAnswer && !result.isCorrect) {
+                                                optClass += " quiz-results__option--wrong-answer";
+                                            }
+
+                                            return (
+                                                <div key={optIdx} className={optClass}>
+                                                    <span className="quiz-results__option-letter">{letter}</span>
+                                                    <span>{opt}</span>
+                                                    {letter === result.correct_answer && (
+                                                        <span className="quiz-results__option-label"> (Correct)</span>
+                                                    )}
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </div>

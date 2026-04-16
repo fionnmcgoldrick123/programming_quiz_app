@@ -3,9 +3,12 @@ from ml.quiz_metadata import compute_coding_metadata
 from ml.difficulty_service import predict_difficulty_for_question
 from ml.tag_service import predict_tags_for_question
 import json
+import logging
+
+logger = logging.getLogger(__name__)
 
 
-def openai_parser(response: dict) -> QuizSchema:
+def openai_parser(response: dict) -> list[QuizSchema]:
     """
     Parses the response from the OpenAI model into QuizSchema objects.
     It extracts quiz title, questions, options, and correct answers.
@@ -15,16 +18,20 @@ def openai_parser(response: dict) -> QuizSchema:
 
     Returns:
         list[QuizSchema]: A list of QuizSchema objects extracted from the response.
+        
+    Raises:
+        json.JSONDecodeError: If the response cannot be parsed as JSON.
+        KeyError: If required fields are missing from the response.
     """
     content = response["choices"][0]["message"]["content"]
 
     try:
         data = json.loads(content)
     except json.JSONDecodeError as e:
-        print("JSON parsing failed: ", e)
-        return {"Error": "Failed to parse JSON"}
+        logger.error(f"JSON parsing failed: {e}")
+        raise
 
-    print("Parsed Quiz Data:", data)
+    logger.info("Parsed Quiz Data successfully")
 
     # Accept both 'quiz_title' and 'title' keys, fallback to a generated title if missing/empty
     quiz_title = data.get("quiz_title") or data.get("title")
@@ -40,7 +47,7 @@ def openai_parser(response: dict) -> QuizSchema:
 
     for q in data["questions"]:
         topic_tags = predict_tags_for_question(quiz_title, q["question"])
-        print(f"[TAG_SERVICE] MCQ predicted tags: {topic_tags}")
+        logger.debug(f"[TAG_SERVICE] MCQ predicted tags: {topic_tags}")
 
         questions.append(
             QuizSchema(
@@ -64,16 +71,20 @@ def openai_coding_parser(response: dict) -> list[CodingQuestionSchema]:
 
     Returns:
         list[CodingQuestionSchema]: A list of coding question objects.
+        
+    Raises:
+        json.JSONDecodeError: If the response cannot be parsed as JSON.
+        KeyError: If required fields are missing from the response.
     """
     content = response["choices"][0]["message"]["content"]
 
     try:
         data = json.loads(content)
     except json.JSONDecodeError as e:
-        print("JSON parsing failed: ", e)
-        return {"Error": "Failed to parse JSON"}
+        logger.error(f"JSON parsing failed for coding questions: {e}")
+        raise
 
-    print("Parsed Coding Quiz Data:", data)
+    logger.info("Parsed Coding Quiz Data successfully")
 
     questions = []
 
@@ -85,7 +96,7 @@ def openai_coding_parser(response: dict) -> list[CodingQuestionSchema]:
         
         question_title = q.get("title", "Coding Challenge")
         topic_tags = predict_tags_for_question(question_title, question)
-        print(f"[TAG_SERVICE] Coding predicted tags: {topic_tags}")
+        logger.debug(f"[TAG_SERVICE] Coding predicted tags: {topic_tags}")
 
         schema = CodingQuestionSchema(
             question=question,

@@ -30,7 +30,7 @@ from services.users import (
     respond_to_friend_request, get_friend_requests, get_friends_list,
     remove_friend, get_friend_count, get_pending_request_count,
     get_user_stats_public, update_user_profile, verify_user_email,
-    resend_verification_email,
+    resend_verification_email, save_quiz_session, get_quiz_history,
 )
 from services.ai_models import send_prompt_to_model
 from services.code_executor import run_code, submit_code
@@ -205,6 +205,12 @@ async def save_result(data: SaveQuizResultRequest, token_data: dict = Depends(ve
 async def user_stats(token_data: dict = Depends(verify_token)):
     """Get aggregated statistics for the authenticated user."""
     return await get_user_stats(token_data["user_id"])
+
+
+@app.get("/quiz-history")
+async def quiz_history(token_data: dict = Depends(verify_token)):
+    """Get the authenticated user's last 20 quiz sessions."""
+    return await get_quiz_history(token_data["user_id"])
 
 
 # --- Code Execution Endpoints ---

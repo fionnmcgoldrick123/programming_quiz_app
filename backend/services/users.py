@@ -593,11 +593,110 @@ def _ensure_friendships_table():
             conn.commit()
 
 
+def _ensure_quiz_sessions_table():
+    """Create the quiz_sessions table if it doesn't exist."""
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                CREATE TABLE IF NOT EXISTS quiz_sessions (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL REFERENCES users(id),
+                    topic VARCHAR(255) NOT NULL,
+                    language VARCHAR(50),
+                    quiz_type VARCHAR(20) NOT NULL,
+                    questions JSONB NOT NULL,
+                    score INTEGER NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                );
+                """
+            )
+            conn.commit()
+
+
 def init_db():
     """Initialise all database tables in dependency order."""
     _ensure_users_table()
     _ensure_quiz_results_table()
     _ensure_friendships_table()
+    _ensure_quiz_sessions_table()
+
+
+async def save_quiz_session(user_id: int, topic: str, language: str, quiz_type: str, questions: list, score: int):
+    """
+    Save a completed quiz session for the user.
+    
+    Args:
+        user_id (int): The user's ID.
+        topic (str): The quiz topic.
+        language (str): Programming language (for coding quizzes).
+        quiz_type (str): Type of quiz ('mcq' or 'coding').
+        questions (list): List of questions in the session (stored as JSONB).
+        score (int): User's score (number of correct answers).
+    
+    Returns:
+        dict: Confirmation message with session ID.
+    """
+    import json
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                INSERT INTO quiz_sessions (user_id, topic, language, quiz_type, questions, score)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id;
+                """,
+                (
+                    user_id,
+                    topic,
+                    language,
+                    quiz_type,
+                    json.dumps(questions),
+                    score,
+                ),
+            )
+            result = cur.fetchone()
+            conn.commit()
+    return {"message": "Quiz session saved", "session_id": result["id"]}
+
+
+async def get_quiz_history(user_id: int):
+    """
+    Get the last 20 quiz sessions for a user.
+    
+    Args:
+        user_id (int): The user's ID.
+    
+    Returns:
+        list: List of quiz sessions with their details.
+    """
+    import json
+    with get_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT id, topic, language, quiz_type, questions, score, created_at
+                FROM quiz_sessions
+                WHERE user_id = %s
+                ORDER BY created_at DESC
+                LIMIT 20;
+                """,
+                (user_id,),
+            )
+            sessions = cur.fetchall()
+    
+    return [
+        {
+            "id": s["id"],
+            "topic": s["topic"],
+            "language": s["language"],
+            "quiz_type": s["quiz_type"],
+            "questions": s["questions"] if isinstance(s["questions"], list) else json.loads(s["questions"]),
+            "score": s["score"],
+            "created_at": s["created_at"].isoformat() if s["created_at"] else None,
+        }
+        for s in sessions
+    ]
 
 
 async def save_quiz_result(user_id: int, data: SaveQuizResultRequest):

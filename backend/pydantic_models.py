@@ -1,7 +1,12 @@
-from typing import List, Optional
+from typing import List, Optional, Literal
 from pydantic import BaseModel, field_validator
 from datetime import datetime
 
+# Supported languages for code generation
+SUPPORTED_LANGUAGES = {
+    "python", "javascript", "typescript", "java", "cpp", "c", 
+    "csharp", "ruby", "go", "rust", "php", "swift", "kotlin"
+}
 
 class QuizSchema(BaseModel):
     title: str
@@ -16,6 +21,28 @@ class PromptRequest(BaseModel):
     num_questions: Optional[int] = None
     quiz_type: Optional[str] = None
     language: Optional[str] = None
+    topic: Optional[str] = None
+    
+    @field_validator('num_questions')
+    @classmethod
+    def validate_num_questions(cls, v):
+        if v is not None and (v < 1 or v > 20):
+            raise ValueError('num_questions must be between 1 and 20')
+        return v
+    
+    @field_validator('language')
+    @classmethod
+    def validate_language(cls, v):
+        if v is not None and v.lower() not in SUPPORTED_LANGUAGES:
+            raise ValueError(f'language must be one of: {", ".join(sorted(SUPPORTED_LANGUAGES))}')
+        return v
+    
+    @field_validator('topic')
+    @classmethod
+    def validate_topic(cls, v):
+        if v is not None and (len(v) < 3 or len(v) > 100):
+            raise ValueError('topic must be between 3 and 100 characters')
+        return v
 
 
 class CodingQuestionSchema(BaseModel):
@@ -98,6 +125,18 @@ class SaveQuizResultRequest(BaseModel):
     tags: List[str] = []
     language: Optional[str] = None
     prompt: Optional[str] = None
+
+
+class QuizSessionSchema(BaseModel):
+    """Schema for a saved quiz session with questions and score."""
+    id: int
+    user_id: int
+    topic: str
+    language: Optional[str]
+    quiz_type: str
+    questions: List[dict]  # Stored as JSONB
+    score: int
+    created_at: datetime
 
 
 class FriendRequestAction(BaseModel):
