@@ -91,50 +91,48 @@
 
 .prompt-page {
     min-height: calc(100vh - 80px);
-    background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+    background: #1a1a1a;
     font-family: 'Fira Code', monospace;
-    padding: 40px 60px 60px;
+    padding: 48px 60px 72px;
 }
 
 /* Header Section */
 .prompt-header {
     text-align: center;
-    margin-bottom: 50px;
+    margin-bottom: 48px;
 }
 
 .prompt-page-title {
-    font-size: 2.8rem;
+    font-size: 2.6rem;
     font-weight: 700;
     color: #ffffff;
-    margin: 0 0 16px 0;
-    letter-spacing: 1px;
+    margin: 0 0 14px;
+    letter-spacing: 0.5px;
 }
 
 .prompt-page-subtitle {
-    font-size: 1.1rem;
-    color: #808080;
-    margin: 0;
-    max-width: 500px;
+    font-size: 1rem;
+    color: #707070;
     margin: 0 auto;
-    line-height: 1.6;
+    max-width: 480px;
+    line-height: 1.65;
 }
 
 /* Main Content */
 .prompt-content {
-    max-width: 900px;
+    max-width: 860px;
     margin: 0 auto;
     display: flex;
     flex-direction: column;
-    gap: 40px;
+    gap: 28px;
 }
 
 /* Section Styling */
 .prompt-section {
-    background: linear-gradient(135deg, #252525 0%, #2a2a2a 100%);
-    border: 1px solid #3d3d3d;
-    border-radius: 16px;
-    padding: 28px 32px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    background: #222222;
+    border: 1px solid #2e2e2e;
+    border-radius: 14px;
+    padding: 26px 30px;
 }
 
 .prompt-section .section-header {
@@ -142,7 +140,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
     text-align: center;
 }
 
@@ -152,87 +150,83 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
-    background: linear-gradient(135deg, #ff9500 0%, #ff7700 100%);
+    width: 28px;
+    height: 28px;
+    background: linear-gradient(135deg, #ff9500, #ff7700);
     color: #1a1a1a;
-    font-size: 0.95rem;
+    font-size: 0.85rem;
     font-weight: 700;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
 .section-title {
-    font-size: 1.3rem;
+    font-size: 1.15rem;
     font-weight: 600;
-    color: #ffffff;
+    color: #e0e0e0;
     margin: 0;
 }
 
 /* Quiz Type Cards */
 .quiz-type-cards {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px;
-    margin: 0 auto;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
     width: 100%;
-    max-width: 900px;
 }
 
 .quiz-card {
     display: flex;
+    flex-direction: column;
     align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    padding: 6px 18px;
-    height: auto;
-    min-height: 48px;
-    width: 100%;
-    background-color: #1e1e1e;
-    border: 2px solid #3d3d3d;
-    border-radius: 16px;
+    text-align: center;
+    gap: 14px;
+    padding: 28px 22px 24px;
+    min-height: 160px;
+    background: #1c1c1c;
+    border: 2px solid #303030;
+    border-radius: 14px;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: border-color .2s ease, background .2s ease, box-shadow .2s ease;
     position: relative;
     box-sizing: border-box;
-    white-space: normal;
 }
 
 .quiz-card:hover {
     border-color: #ff9500;
-    background-color: #242424;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(255, 149, 0, 0.15);
+    background: #212121;
+    box-shadow: 0 4px 20px rgba(255,149,0,.12);
 }
 
 .quiz-card.selected {
     border-color: #ff9500;
-    background: linear-gradient(135deg, rgba(255, 149, 0, 0.12) 0%, rgba(255, 119, 0, 0.08) 100%);
-    box-shadow: 0 0 20px rgba(255, 149, 0, 0.15);
+    background: rgba(255,149,0,.06);
+    box-shadow: 0 0 0 1px rgba(255,149,0,.3), 0 6px 24px rgba(255,149,0,.1);
 }
 
 .quiz-card-icon {
-    width: 32px;
-    height: 32px;
+    width: 52px;
+    height: 52px;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: linear-gradient(135deg, #2d2d2d 0%, #333333 100%);
-    border-radius: 12px;
+    background: #2a2a2a;
+    border-radius: 14px;
     flex-shrink: 0;
-    border: 1px solid #404040;
+    border: 1px solid #383838;
     box-sizing: border-box;
+    transition: background .2s ease;
 }
 
 .quiz-card-icon img {
-    width: 100%;
-    height: 100%;
+    width: 60%;
+    height: 60%;
     object-fit: contain;
     filter: brightness(0) saturate(100%) invert(62%) sepia(87%) saturate(1000%) hue-rotate(360deg) brightness(103%) contrast(103%);
 }
 
 .quiz-card.selected .quiz-card-icon {
-    background: linear-gradient(135deg, #ff9500 0%, #ff7700 100%);
+    background: #ff9500;
     border-color: transparent;
 }
 
@@ -244,38 +238,46 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 6px;
+    align-items: center;
 }
 
 .quiz-card-content h3 {
-    font-size: 0.9rem;
-    font-weight: 600;
-    color: #ff9500;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #e8e8e8;
     margin: 0;
+    letter-spacing: 0.2px;
+}
+
+.quiz-card.selected .quiz-card-content h3 {
+    color: #ff9500;
 }
 
 .quiz-card-content p {
-    display: block;
     margin: 0;
-    font-size: 0.72rem;
-    line-height: 1.25;
-    color: #9a9a9a;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    color: #777;
 }
 
 .quiz-card-check {
-    width: 16px;
-    height: 16px;
-    border: 2px solid #4d4d4d;
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #404040;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.2s ease;
     flex-shrink: 0;
-    transition: all 0.3s ease;
 }
 
 .quiz-card.selected .quiz-card-check {
-    background: linear-gradient(135deg, #ff9500 0%, #ff7700 100%);
+    background: #ff9500;
     border-color: transparent;
 }
 
@@ -290,43 +292,43 @@
 /* Configuration Row */
 .config-row {
     display: flex;
-    gap: 24px;
+    gap: 20px;
     flex-wrap: wrap;
 }
 
 .config-item {
     flex: 1;
-    min-width: 200px;
+    min-width: 180px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px;
 }
 
 .config-label {
-    font-size: 0.9rem;
-    font-weight: 500;
-    color: #a0a0a0;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #888;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.8px;
 }
 
 .config-select {
-    padding: 14px 16px;
-    border: 2px solid #3d3d3d;
+    padding: 12px 16px;
+    border: 1.5px solid #333;
     border-radius: 10px;
-    background-color: #1e1e1e;
+    background-color: #1a1a1a;
     color: #e0e0e0;
     font-family: 'Fira Code', monospace;
-    font-size: 0.95rem;
+    font-size: 0.9rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: border-color .2s ease, box-shadow .2s ease;
     appearance: none;
     background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ff9500' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
-    background-position: right 14px center;
-    background-size: 18px;
-    padding-right: 44px;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
 }
 
 .config-select:hover {
@@ -336,26 +338,24 @@
 .config-select:focus {
     outline: none;
     border-color: #ff9500;
-    box-shadow: 0 0 16px rgba(255, 149, 0, 0.25);
-    background-color: #242424;
+    box-shadow: 0 0 0 3px rgba(255,149,0,.15);
+    background-color: #1e1e1e;
 }
 
 .config-select option {
     background-color: #1e1e1e;
     color: #e0e0e0;
-    padding: 12px;
 }
 
 /* Question Count Control */
 .question-count-control {
     display: flex;
     align-items: center;
-    gap: 0;
-    border: 2px solid #3d3d3d;
+    border: 1.5px solid #333;
     border-radius: 10px;
     overflow: hidden;
-    background-color: #1e1e1e;
-    transition: border-color 0.3s ease;
+    background-color: #1a1a1a;
+    transition: border-color .2s ease;
 }
 
 .question-count-control:hover {
@@ -363,19 +363,20 @@
 }
 
 .count-btn {
-    width: 44px;
-    height: 46px;
+    width: 42px;
+    height: 44px;
     border: none;
-    background-color: #2d2d2d;
+    background-color: #252525;
     color: #ff9500;
-    font-size: 1.3rem;
+    font-size: 1.2rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background .15s ease;
     font-family: 'Fira Code', monospace;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
 
 .count-btn:hover:not(:disabled) {
@@ -384,7 +385,7 @@
 }
 
 .count-btn:disabled {
-    color: #4d4d4d;
+    color: #404040;
     cursor: not-allowed;
 }
 
@@ -392,11 +393,10 @@
     flex: 1;
     text-align: center;
     font-family: 'Fira Code', monospace;
-    font-size: 1.1rem;
-    font-weight: 600;
+    font-size: 1.05rem;
+    font-weight: 700;
     color: #e0e0e0;
-    min-width: 40px;
-    padding: 0 8px;
+    min-width: 36px;
 }
 
 .config-hint {
@@ -413,34 +413,34 @@
 
 .prompt-textarea {
     width: 100%;
-    min-height: 160px;
-    padding: 18px 20px;
-    border: 2px solid #3d3d3d;
-    border-radius: 12px;
-    background-color: #1e1e1e;
+    min-height: 140px;
+    padding: 16px 18px;
+    border: 1.5px solid #333;
+    border-radius: 10px;
+    background-color: #1a1a1a;
     color: #e0e0e0;
     font-family: 'Fira Code', monospace;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     line-height: 1.7;
     resize: vertical;
-    transition: all 0.3s ease;
+    transition: border-color .2s ease, box-shadow .2s ease;
     box-sizing: border-box;
 }
 
 .prompt-textarea:hover {
-    border-color: #555555;
+    border-color: #484848;
 }
 
 .prompt-textarea:focus {
     outline: none;
     border-color: #ff9500;
-    box-shadow: 0 0 20px rgba(255, 149, 0, 0.2);
-    background-color: #222222;
-    color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(255,149,0,.12);
+    background-color: #1d1d1d;
+    color: #fff;
 }
 
 .prompt-textarea::placeholder {
-    color: #606060;
+    color: #505050;
     font-style: italic;
 }
 
@@ -489,47 +489,44 @@
     justify-content: center;
     gap: 10px;
     width: 100%;
-    max-width: 280px;
-    margin: 10px auto 0;
-    padding: 14px 32px;
-    background: linear-gradient(135deg, #ff9500 0%, #ff7700 100%);
-    color: #ffffff;
+    padding: 15px 32px;
+    background: linear-gradient(135deg, #ff9500, #ff7700);
+    color: #1a1a1a;
     border: none;
     border-radius: 10px;
     font-family: 'Fira Code', monospace;
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-size: 1rem;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 18px rgba(255, 149, 0, 0.3);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    transition: transform .2s ease, box-shadow .2s ease;
+    box-shadow: 0 4px 20px rgba(255,149,0,.3);
+    letter-spacing: 0.3px;
 }
 
 .generate-button:hover:not(:disabled) {
-    transform: translateY(-3px);
-    box-shadow: 0 10px 32px rgba(255, 149, 0, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 28px rgba(255,149,0,.45);
 }
 
 .generate-button:active:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 16px rgba(255, 149, 0, 0.4);
+    transform: translateY(0);
+    box-shadow: 0 3px 12px rgba(255,149,0,.35);
 }
 
 .generate-button:disabled {
-    background: linear-gradient(135deg, #4a4a4a 0%, #3d3d3d 100%);
-    color: #808080;
+    background: #2e2e2e;
+    color: #555;
     cursor: not-allowed;
     box-shadow: none;
 }
 
 .button-text {
-    transition: transform 0.3s ease;
+    transition: transform 0.2s ease;
 }
 
 .button-arrow {
-    font-size: 1.3rem;
-    transition: transform 0.3s ease;
+    font-size: 1.15rem;
+    transition: transform 0.2s ease;
 }
 
 .generate-button:hover:not(:disabled) .button-arrow {
@@ -542,15 +539,11 @@
 
 @media (max-width: 768px) {
     .prompt-page {
-        padding: 24px 20px 40px;
+        padding: 24px 20px 48px;
     }
 
     .prompt-page-title {
-        font-size: 2rem;
-    }
-
-    .prompt-page-subtitle {
-        font-size: 0.95rem;
+        font-size: 1.9rem;
     }
 
     .prompt-section {
@@ -562,15 +555,22 @@
     }
 
     .quiz-card {
+        flex-direction: row;
         text-align: left;
+        min-height: 80px;
+        padding: 16px 20px;
+        gap: 16px;
+        align-items: center;
     }
 
-    .quiz-card-content h3 {
-        font-size: 1.1rem;
+    .quiz-card-content {
+        align-items: flex-start;
     }
 
     .quiz-card-check {
-        align-self: center;
+        position: static;
+        margin-left: auto;
+        flex-shrink: 0;
     }
 
     .config-row {
@@ -582,7 +582,7 @@
     }
 
     .generate-button {
-        max-width: 100%;
+        padding: 14px;
     }
 }
 

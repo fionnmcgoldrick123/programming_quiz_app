@@ -2,7 +2,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef } from "react";
 import Navbar from "../layout/Navbar";
 import { useAuth } from "../../utils/AuthContext";
-import { useHint } from "../../hooks/useHint";
 import '../../css-files/pages/QuizPage.css'
 
 const XP_PER_CORRECT = 10;
@@ -29,8 +28,6 @@ function QuizPage() {
     const location = useLocation();
     const navigate = useNavigate();
     const { token, updateUser, user } = useAuth();
-
-    const { hints, loading: hintLoading, fetchMcqHint, clearHints } = useHint();
 
     const QUIZ_SESSION_KEY = user ? quizSessionKey(user.id) : null;
 
@@ -110,8 +107,7 @@ function QuizPage() {
         setAnswered(false);
         setSelectedAnswer(null);
         setCorrectAnswerIndex(null);
-        clearHints();
-    }, [currentIndex, clearHints]);
+    }, [currentIndex]);
 
     // Save quiz result to backend when finished
     useEffect(() => {
@@ -412,34 +408,6 @@ function QuizPage() {
                                 )}
                             </div>
                         )}
-
-                        {/* ── Hint button & panel ── */}
-                        {!answered && (
-                            <div className="quiz-hint-row">
-                                <button
-                                    className="quiz-hint-btn"
-                                    onClick={() =>
-                                        hints.length
-                                            ? clearHints()
-                                            : fetchMcqHint(currentQ.question, currentQ.options)
-                                    }
-                                    title={hints.length ? "Hide hints" : "Get a hint"}
-                                >
-                                    {hintLoading ? "..." : hints.length ? "💡 Hide Hints" : "💡 Hint"}
-                                </button>
-                            </div>
-                        )}
-
-                        {hints.length > 0 && !answered && (
-                            <div className="quiz-hint-panel">
-                                <ul>
-                                    {hints.map((hint, i) => (
-                                        <li key={i}>{hint}</li>
-                                    ))}
-                                </ul>
-                            </div>
-                        )}
-                        {/* ── END hint ── */}
 
                         {/* Options */}
                         <div className="quiz-options">

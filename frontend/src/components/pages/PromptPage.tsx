@@ -128,7 +128,7 @@ function PromptPage(){
                 body: JSON.stringify({ 
                     prompt: prompt,
                     quiz_type: quizType,
-                    language: selectedLanguage,
+                    ...(selectedLanguage ? { language: selectedLanguage } : {}),
                     num_questions: numQuestions
                 }),
                 signal: controller.signal
