@@ -32,33 +32,7 @@ try:
     _HAS_EXTRACTOR = True
     print("\n" + "="*80)
     print("[DIFFICULTY_SERVICE] Extract Description Features: IMPORTED OK")
-    print("="*80)
-
-    # ── Joblib pickle fix ─────────────────────────────────────────────────────
-    # The pipeline was pickled while difficulty_predictor.py ran as __main__, so
-    # joblib stored _squeeze_array / _to_dense under the '__main__' namespace.
-    # These are injected back into __main__ here so joblib.load() can resolve them.
-    #
-    # _squeeze_array is also redefined to use np.atleast_1d so that a single-row
-    # DataFrame text column is never squeezed to a scalar string, which would
-    # cause the TF-IDF vectorizer to fail with "string object received".
-    import numpy as _np
-    import sys as _sys
-
-    def _squeeze_array(x):
-        """Safe squeeze: never returns a 0-d scalar (fixes single-row inference)."""
-        arr = x.squeeze() if hasattr(x, "squeeze") else x
-        return _np.atleast_1d(arr)
-
-    _main_module = _sys.modules.get("__main__")
-    _INJECT = ["_squeeze_array", "_to_dense"]
-    for _fn_name in _INJECT:
-        if _main_module is not None:
-            fn = _squeeze_array if _fn_name == "_squeeze_array" else getattr(_dp_module, _fn_name, None)
-            if fn is not None and not hasattr(_main_module, _fn_name):
-                setattr(_main_module, _fn_name, fn)
-                print(f"   Injected {_fn_name} into __main__")
-    print()
+    print("="*80 + "\n")
 
 except Exception as e:
     print(f"\n[DIFFICULTY_SERVICE] ERROR: could not import extract_description_features: {e}\n")
@@ -84,7 +58,42 @@ def _load_model():
         print("[DIFFICULTY_SERVICE] MODEL LOADING: STARTING")
         print("="*80)
         print(f"  • Loading from: {_MODEL_PATH}")
-        bundle = joblib.load(_MODEL_PATH)
+
+        # ── Pickle fix: swap __main__ with a shim ─────────────────────────────
+        # The pipeline was pickled while difficulty_predictor.py ran as __main__,
+        # so joblib stored _squeeze_array / _to_dense under '__main__'.
+        # In a Uvicorn server process __main__ is a frozen builtin module and
+        # setattr() on it fails, so we temporarily replace sys.modules['__main__']
+        # with a thin shim that exposes these functions for deserialization.
+        import types as _types
+        _shim = _types.ModuleType("__main__")
+        _dp_mod = globals().get("_dp_module")
+        if _dp_mod is not None and hasattr(_dp_mod, "_squeeze_array"):
+            _shim._squeeze_array = _dp_mod._squeeze_array
+        else:
+            import numpy as _np_fix
+            def _sq(x):
+                arr = x.squeeze() if hasattr(x, "squeeze") else x
+                return _np_fix.atleast_1d(arr)
+            _shim._squeeze_array = _sq
+        if _dp_mod is not None and hasattr(_dp_mod, "_to_dense"):
+            _shim._to_dense = _dp_mod._to_dense
+        else:
+            def _td(x):
+                return x.toarray() if hasattr(x, "toarray") else x
+            _shim._to_dense = _td
+
+        _real_main = sys.modules.get("__main__")
+        sys.modules["__main__"] = _shim
+        try:
+            bundle = joblib.load(_MODEL_PATH)
+        finally:
+            if _real_main is not None:
+                sys.modules["__main__"] = _real_main
+            else:
+                del sys.modules["__main__"]
+        # ─────────────────────────────────────────────────────────────────────
+
         _model = bundle["pipeline"]
         _le    = bundle["label_encoder"]
         classes = list(_le.classes_)
