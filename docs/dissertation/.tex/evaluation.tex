@@ -1,0 +1,586 @@
+\chapter{System Evaluation}
+
+\section{Introduction}
+
+This chapter evaluates the system against the six objectives defined in
+the Introduction. It presents quantitative results for both machine
+learning components, discusses the behaviour of the end to end
+application pipeline, and reflects critically on the limitations of the
+approaches taken. Where results fall short of ideal, the reasons are examined honestly rather than being simplified or ignored, as understanding why a
+component under performs is as important as knowing that it does.
+
+The evaluation is structured in three parts. Sections
+\ref{sec:eval-difficulty} and \ref{sec:eval-tags} cover the two
+classifiers in detail, presenting training curves, model comparisons,
+confusion matrices, and per class analysis. Section
+\ref{sec:eval-application} evaluates the application level objectives:
+the generation pipeline, the code execution engine, and the user
+features. Section \ref{sec:eval-objectives} then maps the findings back
+to each objective explicitly.
+
+\section{Objective 3: Difficulty Classifier}
+\label{sec:eval-difficulty}
+
+\subsection{Dataset and Class Balance}
+
+The difficulty classifier was trained on problems extracted from IBM
+Project CodeNet \cite{puri2021codenet}, with difficulty labels derived
+from acceptance rate percentile binning as described in the System
+Design chapter. Because the labels were produced by dividing the sorted
+acceptance rate distribution into three equal terciles, the resulting
+class distribution is by construction approximately balanced, as shown
+in Figure \ref{fig:difficulty-distribution}. Each class contains
+approximately 1,280 problems, giving a total dataset of roughly 3,840
+labelled problems. This balance is a direct consequence of the
+percentile binning strategy and is an important positive property: it
+means that a naive majority class baseline would achieve only around 33
+percent accuracy, and it removes the need for class weighting or
+oversampling techniques \cite{chawla2002smote} during training.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\linewidth]{./images/evaluation/difficulty_distribution.png}
+    \caption{Class distribution of the difficulty labels derived from
+    acceptance rate percentile binning across the CodeNet dataset. The
+    near equal counts across easy, medium, and hard confirm that the
+    tercile binning strategy produced a balanced training set.}
+    \label{fig:difficulty-distribution}
+\end{figure}
+
+\subsection{Model Comparison}
+
+Seven candidate models were evaluated using five fold cross validation
+\cite{kohavi1995crossval} scored on F1 macro: XGBoost
+\cite{chen2016xgboost}, HistGradientBoosting, Gradient Boosting
+\cite{friedman2001gradient}, Logistic Regression, Linear SVM
+\cite{cortes1995svm}, Random Forest \cite{breiman2001randomforests},
+and k Nearest Neighbours. Validation accuracy scores are shown in
+Figure \ref{fig:difficulty-model-comparison}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]
+        {./images/evaluation/model_comparison.png}
+    \caption{Validation accuracy comparison across all seven candidate
+    difficulty classifier models. XGBoost achieved the highest
+    validation accuracy at 0.605, narrowly ahead of HistGradientBoosting
+    at 0.597.}
+    \label{fig:difficulty-model-comparison}
+\end{figure}
+
+XGBoost \cite{chen2016xgboost} achieved the highest validation accuracy
+at 0.605, narrowly ahead of HistGradientBoosting at 0.597. Both
+ensemble methods substantially outperformed the weaker baselines of k
+Nearest Neighbours (0.469) and Linear SVM (0.544). The relatively small
+spread between the top four models (0.543 to 0.605) suggests that the
+difficulty classification task is intrinsically challenging, which is
+expected given that the labels are derived from a proxy signal rather
+than from ground truth human judgements \cite{zhou2017weaksupervision}.
+
+\subsection{Final Model Results}
+
+XGBoost was selected as the final model and evaluated on the held out
+test set. The confusion matrix is shown in Figure
+\ref{fig:difficulty-confusion-matrix}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\linewidth]{./images/evaluation/confusion_matrix.png}
+    \caption{Confusion matrix for the final XGBoost difficulty
+    classifier evaluated on the held out test set. Rows represent true
+    labels and columns represent predicted labels.}
+    \label{fig:difficulty-confusion-matrix}
+\end{figure}
+
+The per class results derived from the confusion matrix are summarised
+in Table \ref{table:difficulty-results}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcccc}
+        \hline
+        \textbf{Class} & \textbf{Correct} & \textbf{Total} &
+        \textbf{Recall} & \textbf{Misclassified as} \\
+        \hline
+        Easy   & 175 & 260 & 0.67 & Medium (62), Hard (23) \\
+        Medium & 125 & 259 & 0.48 & Easy (55), Hard (79) \\
+        Hard   & 162 & 260 & 0.62 & Easy (21), Medium (77) \\
+        \hline
+        \textbf{Overall} & \textbf{462} & \textbf{779} &
+        \multicolumn{2}{c}{\textbf{Accuracy: 0.593}} \\
+        \hline
+    \end{tabular}
+    \caption{Per class performance of the XGBoost difficulty classifier
+    on the test set, derived from the confusion matrix.}
+    \label{table:difficulty-results}
+\end{table}
+
+The model performs best on the easy class (recall 0.67) and worst on
+medium (recall 0.48). The medium class is consistently the hardest to
+classify across all models, which is a well known phenomenon in ordinal
+three class problems: the middle class shares boundary characteristics
+with both neighbours and therefore receives the most misclassifications
+in both directions. The hard class shows a notable asymmetry: 77 hard
+problems are misclassified as medium but only 21 as easy, which makes
+intuitive sense given that hard and medium problems are more similar
+to each other than hard and easy problems are.
+
+\subsection{Critical Analysis: The Proxy Label Problem}
+
+The most significant limitation of the difficulty classifier is one
+that cannot be resolved by changing the model: the labels themselves
+are a proxy. Acceptance rate reflects how often competitive programmers,
+ranging from beginners to experts, successfully solve a problem on a
+judging platform. This is a reasonable but imperfect signal for
+difficulty for several reasons. First, acceptance rate is influenced
+by factors beyond intrinsic problem difficulty, including the
+popularity of the problem (which determines how many attempts are
+made), the typical skill level of the platform's user base at the time
+the problem was active, and whether the problem has known edge cases
+that trip up otherwise strong solutions. Second, the percentile
+binning means that the label boundaries are arbitrary: a problem at
+the 33rd percentile is labelled easy and one at the 34th is labelled
+medium, even though their acceptance rates may differ by a fraction of
+a percent.
+
+A test set accuracy of approximately 0.59 on a balanced three class
+problem represents a meaningful improvement over the random baseline
+of 0.33 and the majority class baseline of 0.33. However, it also
+means that roughly four in ten predictions are incorrect. In the
+context of the platform, this is acceptable because the difficulty
+label is presented to the user as a rough guide rather than a
+guarantee. A question labelled easy that is genuinely medium does not
+break the user experience. It merely provides slightly miscalibrated
+guidance. The value of the component lies in having some automated
+difficulty signal on AI generated content that would otherwise carry
+no label at all.
+
+\section{Objective 2: Topic Tag Classifier}
+\label{sec:eval-tags}
+
+\subsection{Dataset Analysis}
+
+The topic tag classifier was trained on LeetCode \cite{leetcode2025}
+problems as a multi label classification task, since a single problem
+may be associated with multiple algorithmic topic tags. After removing
+tags with fewer than 20 samples, ten classes were retained: Array,
+String, Math, Hash Table, Database, Tree, Dynamic Programming, Linked
+List, Two Pointers, and Depth First Search. The class distribution
+before and after filtering is shown in Figure
+\ref{fig:tag-class-distribution}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{./images/evaluation/01_class_distribution.png}
+    \caption{LeetCode topic tag distribution before filtering
+    (left) and after applying the 60 sample minimum threshold (right).
+    Array dominates with 1,168 examples. Tags such as Stack (13),
+    Binary Search (10), and Graph (8) were removed due to insufficient
+    samples.}
+    \label{fig:tag-class-distribution}
+\end{figure}
+
+The dataset is substantially imbalanced. Array accounts for 1,168 of
+the retained problems while Depth First Search contributes only 26.
+This imbalance is the dominant factor shaping classifier performance
+and is the root cause of the low F1 macro scores observed across all
+models \cite{japkowicz2002imbalance}. A model can achieve high accuracy
+simply by performing well on Array and String, which together account
+for over 45 percent of the dataset, while performing poorly on the
+minority classes. This tension between accuracy and macro F1 is
+visible throughout the results.
+
+Figure \ref{fig:tag-word-length} shows the word count distribution per
+class. Database problems are notably longer on average, which is
+consistent with their SQL heavy descriptions. Tree and Linked List
+problems tend to be shorter.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]
+        {./images/evaluation/02_text_length_by_class.png}
+    \caption{Word count distribution per topic class for the combined
+    title and description text. Database problems are consistently
+    longer than other classes. The wide variance within classes
+    reflects the diverse nature of problems within each topic.}
+    \label{fig:tag-word-length}
+\end{figure}
+
+\subsection{Feature Analysis}
+
+Figure \ref{fig:tag-top-words} shows the top 30 terms across the
+entire corpus after English stop word removal. Terms such as
+\texttt{example}, \texttt{input}, \texttt{output}, and \texttt{nums}
+appear across all classes and provide little discriminative signal.
+The more informative terms are those that appear prominently in only
+one or two classes.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{./images/evaluation/03_top_words_overall.png}
+    \caption{Top 30 terms across the full LeetCode corpus after
+    English stop word removal. High frequency generic terms such as
+    \texttt{example}, \texttt{input}, and \texttt{output} appear
+    across all topic classes and provide limited discriminative value
+    for classification.}
+    \label{fig:tag-top-words}
+\end{figure}
+
+The per class feature analysis from the final SGD Classifier is shown
+in Figure \ref{fig:tag-top-features}. This confirms that the model has
+learned genuinely meaningful signals: Database problems are
+characterised by terms such as \texttt{table}, \texttt{column}, and
+\texttt{column type}; Linked List problems by \texttt{linked},
+\texttt{head}, and \texttt{nodes list}; Tree problems by \texttt{tree},
+\texttt{root}, and \texttt{binary tree}. The features learned for
+Dynamic Programming are notably less clean, including general graph
+terms such as \texttt{graph} and \texttt{cities}, which explains the
+model's weaker performance on that class.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{./images/evaluation/12_top_features_per_class.png}
+    \caption{Top 12 classifier weight features per topic class for the
+    final SGD Classifier. Classes with distinctive vocabulary
+    (Database, Linked List, Tree) show clean, semantically meaningful
+    features. Dynamic Programming and Hash Table show more overlap
+    with other classes, which corresponds directly to their lower F1
+    scores.}
+    \label{fig:tag-top-features}
+\end{figure}
+
+\subsection{Model Comparison}
+
+Seven candidate models were evaluated on the validation set. Model
+selection during training was performed using F1 micro, consistent
+with the multi label objective and the use of \texttt{GridSearchCV}.
+For evaluation and comparison, F1 macro is reported as the primary
+metric, as it provides a more informative view of performance across
+all classes in the presence of class imbalance
+\cite{zhang2014multilabel}. The models correspond directly to the
+training configurations defined in the pipeline: logistic regression
+with word features, logistic regression with combined word and
+character features, an SGD classifier with word features, and a
+classifier chain of logistic regressions with combined features. The
+results are shown in Figure \ref{fig:tag-f1-comparison}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]
+        {./images/evaluation/05_model_comparison_f1.png}
+    \caption{Validation set F1 macro comparison across the seven candidate
+    topic tag classifier models. The SGD classifier achieved the highest
+    F1 macro and was therefore selected as the final deployed model.}
+    \label{fig:tag-f1-comparison}
+\end{figure}
+
+Figure \ref{fig:tag-all-metrics} presents all three metrics (accuracy,
+F1 macro, and F1 weighted) for every model side by side, illustrating
+the gap between accuracy and macro F1 that results from the class
+imbalance.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]
+        {./images/evaluation/09_grouped_metrics.png}
+    \caption{Validation accuracy, F1 macro, and F1 weighted for the seven
+    candidate topic tag classifier models. The consistent gap between
+    accuracy and F1 macro reflects the class imbalance in the LeetCode
+    dataset, where high accuracy can be achieved by performing well on the
+    dominant classes alone.}
+    \label{fig:tag-all-metrics}
+\end{figure}
+
+SGD Classifier achieved the highest validation F1 macro at 0.6464 and
+was selected as the deployed model. The effect of hyperparameter
+tuning via GridSearchCV is shown in Figure \ref{fig:tag-tuning}. For
+most models the gain from tuning was marginal, with the exception of
+Multinomial NB which improved substantially from 0.615 to 0.785 in
+validation accuracy after tuning, suggesting its default alpha
+parameter was poorly suited to this corpus.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]
+        {./images/evaluation/06_default_vs_tuned.png}
+    \caption{Comparison of default parameters versus GridSearchCV tuned
+    parameters for each model on the validation set. The most notable
+    improvement is Multinomial NB, which gained 17 percentage points in
+    accuracy after tuning.}
+    \label{fig:tag-tuning}
+\end{figure}
+
+The five fold cross validation F1 macro score distributions are shown
+in Figure \ref{fig:tag-cv-distributions}. SGD Classifier ($0.588 \pm
+0.019$) and Linear SVC ($0.581 \pm 0.006$) show the most stable
+performance. Multinomial NB shows high variance ($0.575 \pm 0.041$),
+indicating sensitivity to the particular fold split and making it a
+riskier choice for deployment.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]
+        {./images/evaluation/07_cv_score_distributions.png}
+    \caption{Cross validation F1 macro score distributions (five fold)
+    for all models with best hyperparameters. SGD Classifier and
+    Linear SVC show the tightest distributions, indicating the most
+    consistent generalisation across folds.}
+    \label{fig:tag-cv-distributions}
+\end{figure}
+
+\subsection{Final Model Test Set Results}
+
+The SGD Classifier was evaluated on the held out test set. Final
+results are summarised in Table \ref{table:tag-results-final}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+        \hline
+        \textbf{Metric} & \textbf{Validation} & \textbf{Test Set} \\
+        \hline
+        Accuracy    & 0.805 & 0.805 \\
+        F1 Macro    & 0.646 & 0.622 \\
+        F1 Weighted & 0.802 & \\
+        \hline
+    \end{tabular}
+    \caption{Final SGD Classifier performance on validation and test
+    sets. The 2.4 percentage point drop in F1 macro from validation
+    to test set is modest and consistent with normal generalisation
+    behaviour.}
+    \label{table:tag-results-final}
+\end{table}
+
+The per class F1 scores across all models on both validation and test
+sets are shown in Figures \ref{fig:tag-per-class-val} and
+\ref{fig:tag-confusion-sgd}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]
+        {./images/evaluation/10_per_class_f1_heatmap.png}
+    \caption{Per class F1 scores for all models on the validation set,
+    with the SGD Classifier test set results shown in the final row.
+    Array, Database, and Tree are consistently strong across all
+    models. Dynamic Programming, Hash Table, and Two Pointers are
+    consistently the weakest classes.}
+    \label{fig:tag-per-class-val}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]
+        {./images/evaluation/11_confusion_matrix_best.png}
+    \caption{Row normalised confusion matrix for the SGD Classifier on
+    the test set. Array (0.90), Database (1.00), Math (0.86), and Tree
+    (1.00) show strong diagonal dominance. Dynamic Programming (0.40)
+    and Two Pointers (0.43) show the highest off diagonal confusion,
+    primarily misclassified as Array.}
+    \label{fig:tag-confusion-sgd}
+\end{figure}
+
+The per class results for the final deployed SGD Classifier are
+presented in Table \ref{table:tag-per-class}.
+
+\begin{table}[H]
+    \centering
+    \begin{tabular}{lcc}
+        \hline
+        \textbf{Topic Class} & \textbf{Test F1} & \textbf{Primary Confusion} \\
+        \hline
+        Array              & 0.91 & \\
+        Database           & 1.00 & \\
+        Tree               & 0.83 & \\
+        Math               & 0.79 & \\
+        Linked List        & 0.71 & Hash Table \\
+        Depth First Search & 0.73 & Array \\
+        String             & 0.57 & Array \\
+        Two Pointers       & 0.29 & String or Math \\
+        Dynamic Programming & 0.35 & Array \\
+        Hash Table         & 0.20 & Array or String \\
+        \hline
+    \end{tabular}
+    \caption{Per class F1 scores for the final SGD Classifier on the
+    test set, with the primary misclassification direction noted for
+    weaker classes.}
+    \label{table:tag-per-class}
+\end{table}
+
+\subsection{Critical Analysis: Class Imbalance and Conceptual Overlap}
+
+Two factors dominate the weaknesses of the topic tag classifier. The
+first is class imbalance: Array accounts for 1,168 training examples
+while Depth First Search has only 26. This means the classifier has
+seen roughly 45 times as many Array examples, and when a minority
+class problem contains any vocabulary that also appears in Array
+problems (which is almost always true for terms like \texttt{nums},
+\texttt{input}, and \texttt{length}), the model is biased towards
+predicting Array.
+
+The second factor is conceptual overlap between classes. Dynamic
+Programming and Depth First Search both involve graph like reasoning,
+and their problem descriptions frequently share terms. Hash Table
+problems often involve sliding window or two pointer counting patterns
+that resemble both Array and Two Pointers problems. These overlaps are
+not an artefact of the model's weakness. They reflect genuine ambiguity
+in the label definitions themselves, which is consistent with the
+broader observation by Zhang and Zhou \cite{zhang2014multilabel} that
+label correlation is a defining feature of multi label problems.
+
+Training time for all models was extremely fast, as shown in
+Figure \ref{fig:tag-training-time}, with all models completing
+GridSearchCV in under seven seconds. This confirms that the
+computational cost of maintaining and retraining the classifier is
+negligible.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\linewidth]
+        {./images/evaluation/08_training_time.png}
+    \caption{Total training time including GridSearchCV for each topic
+    tag classifier model. All models complete training in under seven
+    seconds, confirming that retraining is computationally trivial
+    should the dataset be expanded in future.}
+    \label{fig:tag-training-time}
+\end{figure}
+
+Despite these limitations, a test set accuracy of 0.805 and F1 macro
+of 0.622 represents a genuinely useful classification capability for
+the platform's purpose. A user generating questions about Dynamic
+Programming may occasionally receive a question tagged as Array, but
+the majority of generated questions will receive a meaningful and
+correct topic label.
+
+\section{Application Level Evaluation}
+\label{sec:eval-application}
+
+\subsection{Objective 1: AI Generation Pipeline}
+
+The end to end quiz generation pipeline was tested manually across
+both AI backends and both quiz types. Both the OpenAI
+(\texttt{gpt-4o-mini}) and Ollama (\texttt{llama3.1:8b}) backends
+successfully produced well formed MCQ and coding challenge JSON in
+the vast majority of test runs. The OpenAI backend consistently
+produced clean, schema conforming JSON that parsed without
+intervention. The Ollama backend required additional post processing
+in \texttt{parser\_ollama.py}, most notably stripping option prefix
+characters such as \texttt{"A: "} from MCQ option strings, which the
+OpenAI model did not include.
+
+The most significant challenge encountered during development was
+JSON parsing reliability. LLMs do not guarantee valid JSON output,
+and both backends occasionally produced responses with minor
+formatting errors such as trailing commas, truncated option strings,
+or inconsistent field names when the prompt asked for a larger number
+of questions. This was partially mitigated by the strict schema
+specified in the prompt templates and by wrapping the parse step in
+try and except blocks that return meaningful error messages rather
+than crashing silently. This parsing fragility is a known limitation
+of prompt based LLM integration \cite{liu2023promptsurvey} and is
+discussed further in the conclusion. The availability of structured
+output enforcement at the API level \cite{openai2024structured}
+offers a concrete path to resolving this limitation in a future
+iteration.
+
+The 120 second \texttt{httpx} timeout was appropriate in practice.
+Requests to \texttt{gpt-4o-mini} for five questions typically
+completed in 5 to 15 seconds. Requests to the local Ollama backend
+were slower at 20 to 60 seconds depending on hardware, but remained
+within the timeout window.
+
+\subsection{Objective 5: Code Execution Engine}
+
+The code execution engine was tested manually across all five
+supported languages (Python, JavaScript, TypeScript, Java, C\#) using
+both correct and intentionally incorrect solutions. The five second
+timeout correctly terminated infinite loop submissions in all tested
+cases. Python and JavaScript execution was reliable and fast.
+TypeScript required the transpile then execute step which added a
+small overhead but functioned correctly. Java and C\# required careful
+handling of the class name and entry point expectations of their
+respective runtimes, and both worked reliably once these constraints
+were enforced in the execution logic.
+
+Test case pass and fail evaluation was verified by submitting known
+correct solutions against the AI generated test cases and confirming
+that all cases passed, and then introducing deliberate off by one
+errors and confirming that the appropriate subset of test cases
+failed. The output comparison logic correctly handles trailing
+whitespace differences.
+
+\subsection{Objective 6: User Features}
+
+The authentication system, experience and levelling mechanic, quiz
+result persistence, and social friends network were all tested through
+manual interaction with the running application. JWT protected routes
+correctly rejected requests without a valid token. The levelling
+formula (\texttt{xp\_for\_level = 100 * level}) produced correct
+behaviour across level boundaries in manual testing.
+
+The friends system was tested by creating two user accounts and
+exercising the full lifecycle: sending a friend request, accepting it,
+verifying mutual friendship, and then removing the friendship. The
+\texttt{UNIQUE(requester\_id, addressee\_id)} database constraint
+correctly prevented duplicate requests, and the \path{CHECK
+(requester\_id != addressee\_id)} constraint correctly rejected self
+friendship attempts.
+
+\section{Evaluation Against Objectives}
+\label{sec:eval-objectives}
+
+Table \ref{table:objectives-summary} summarises the outcome for each
+of the six objectives defined in the Introduction.
+
+\begin{table}[H]
+    \centering
+    \renewcommand{\arraystretch}{1.4}
+    \begin{tabular}{p{0.05\linewidth} p{0.45\linewidth} p{0.12\linewidth}
+        p{0.30\linewidth}}
+        \hline
+        \textbf{\#} & \textbf{Objective} & \textbf{Status} &
+        \textbf{Notes} \\
+        \hline
+        1 & Full stack web application with AI powered MCQ and coding
+            challenge generation supporting multiple AI backends
+          & Met
+          & Both OpenAI and Ollama backends functional. JSON parsing
+            occasionally fragile on large requests. \\
+        2 & Multi label topic tag classifier predicting algorithmic
+            topic tags for generated questions
+          & Met
+          & Test accuracy 0.805, F1 macro 0.622. Class imbalance limits
+            performance on minority classes. \\
+        3 & Difficulty classifier predicting easy, medium, or hard in
+            the absence of explicit human labels
+          & Met
+          & XGBoost test accuracy approx. 0.593. Proxy label ceiling
+            acknowledged. Medium class hardest to classify. \\
+        4 & Both classifiers integrated into the backend inference
+            pipeline, enriching every generated question automatically
+          & Met
+          & Both models loaded as in process singletons. Inference
+            adds negligible latency per question. \\
+        5 & Code execution engine supporting multiple programming
+            languages with test case evaluation
+          & Met
+          & All five languages functional. Five second timeout
+            enforced. No kernel level sandboxing. \\
+        6 & User accounts system with authentication, experience and
+            levelling, and social friends network
+          & Met
+          & JWT auth, bcrypt passwords, full friends lifecycle, and
+            experience system all functional. \\
+        \hline
+    \end{tabular}
+    \caption{Summary of project objectives and their evaluation
+    outcomes.}
+    \label{table:objectives-summary}
+\end{table}
+
+All six objectives were met. The primary areas of limitation are the
+difficulty classifier's reliance on a proxy label, the topic
+classifier's performance on minority classes, and the JSON parsing
+fragility of the AI generation pipeline. These limitations are not
+failures of implementation but reflect genuine challenges in the
+problem domain, and each is discussed further in the Conclusion
+chapter.

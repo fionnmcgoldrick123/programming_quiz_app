@@ -1,0 +1,232 @@
+\chapter{Methodology}
+
+\section{Development Approach}
+
+This project is primarily centred on the design and development of a full stack software system. The main objective was to build and deliver a functional application, and the process was therefore guided by established software engineering practices. However, the development was supported by a focused research component, particularly in the areas of machine learning model selection and training, where decisions around algorithms, datasets, and evaluation strategies were informed by existing literature and exploratory experimentation before implementation. An empirical approach was applied throughout: rather than fixing a design upfront, each subsystem was developed, tested, measured, and refined based on observed performance.
+
+The overarching development approach was agile, iterative, and incremental,
+drawing on the principles of the Agile Manifesto \cite{agilemanifesto2001}
+and lightweight practice suggested by Beck and Andres \cite{beck2004xp}.
+Rather than attempting to design the entire system upfront and implement
+it in sequence from start to finish, the project was broken into a series
+of development cycles, each delivering a working vertical slice of
+functionality that could be tested, reviewed, and built upon. This
+approach was well suited to a project of this complexity, where the
+requirements for the machine learning components could not be fully
+specified in advance. The decision to use a multi label classifier for
+topic tagging, for example, only emerged once the nature of the training
+data was properly understood: the LeetCode corpus showed that problems
+routinely carry several tags at once, which ruled out a single label
+classifier from the outset. Similarly, the approach to difficulty labelling
+only became clear after exploring the structure of the IBM CodeNet dataset
+and noticing that while no explicit difficulty labels were available,
+acceptance rate provided a usable proxy signal.
+
+\section{Planning and Requirements}
+
+Before any implementation began, a significant amount of upfront planning
+was undertaken to establish the scope of the project and the technologies
+that would be used. This planning work was produced entirely within Figma
+and is documented in the \texttt{/docs/project\_planning} folder of the
+project repository. The artefacts produced include a concept summary
+outlining the high level vision for the platform, an original system
+architecture diagram showing how the major components would relate to each
+other, a planned tech stack document justifying the selection of each
+major technology, prototype requirements describing the expected behaviour
+of the system at a minimum viable product level, and a Docker container
+plan specifying how the three services (database, backend, and frontend)
+would be orchestrated. A Gantt chart was also produced, created in Canva,
+mapping out the intended timeline for each phase of development from
+initial research through to final testing and writeup.
+
+This planning phase served as a storyboarding exercise for the entire
+project. By working through the architecture visually before writing any
+code, it was possible to identify dependencies between components early.
+For instance, it became clear that the backend API contracts needed to be
+defined before meaningful frontend development could begin, and that the
+machine learning models needed to be trained and serialised before they
+could be integrated into the inference pipeline. Identifying these ordering
+constraints in advance meant that the sequence of sprints could be
+arranged to minimise rework.
+
+Requirements were determined through a combination of domain analysis and
+personal specification. Since this was a solo project without an external
+client, the requirements were derived by examining similar platforms,
+identifying the gaps described in the introduction, and translating them
+into concrete functional and non functional specifications. Functional
+requirements included question generation via prompt, multiple choice and
+coding challenge formats, topic tag prediction, difficulty prediction,
+code execution with test case evaluation, user authentication, and a
+social friends system. Non functional requirements included containerised
+deployment for reproducibility, sub second machine learning inference
+latency so that the enrichment step would not degrade the perceived speed
+of question generation, and support for at least five programming languages
+in the code runner so that the platform would serve a realistic spread of
+coursework scenarios.
+
+\section{Iterative Development Cycles}
+
+Development proceeded through a series of loosely defined sprints, each
+targeting a coherent piece of functionality. The early sprints focused on
+establishing the foundational infrastructure: configuring the PostgreSQL
+database, handling API calls to large language models, and building the
+basic FastAPI skeleton with a working database connection. Once the
+infrastructure was stable, subsequent cycles added the AI generation
+pipeline, the machine learning training and integration work, the code
+execution engine, the authentication system, and finally the social
+features and frontend polish.
+
+This incremental approach meant that the system was in a runnable and
+testable state throughout most of the development period. At no point was
+the entire codebase non functional for more than a short period while a
+breaking change was integrated. This mattered because it allowed problems
+to be caught early, when the context of what had just changed was still
+fresh, rather than at the end of a long development phase when the source
+of a bug could be difficult to trace. The principle at work here is
+essentially the same one that underlies continuous integration: small,
+frequent changes are cheaper to verify and cheaper to revert than large
+ones.
+
+Where technical problems arose, an empirical approach was taken. When the
+topic tag classifier initially produced poor results, for example, the
+response was not to switch to a different algorithm immediately but rather
+to investigate the training data more carefully, examine the class
+distribution, experiment with threshold tuning, and try different feature
+engineering strategies before drawing conclusions. This reflects a
+scientific problem solving habit even within a software development
+context: observe, hypothesise, test, and iterate. In several cases the
+root cause turned out to be in the data rather than the model. Rare topic
+tags with only a handful of examples were producing unreliable predictions
+not because the classifier was wrong but because there simply was not
+enough signal to learn from. The eventual fix was a minimum sample
+threshold filter on the tag set rather than a change in algorithm.
+
+\section{GitHub Workflow}
+
+GitHub was used throughout the project as both the version control system
+and the primary project management tool. The repository followed a flexible
+branching strategy centred around a stable \texttt{main} branch, with
+additional branches created as needed to support ongoing development.
+Rather than adhering to a strict two branch model, new branches were often
+created to address specific features or areas of the system, such as social
+functionality, or to work on tasks associated with particular GitHub
+issues. This lightweight approach suited a solo project, where the
+overhead of maintaining long lived parallel branches would have outweighed
+the benefits.
+
+Work was tracked using GitHub Issues, where each issue represented a
+discrete unit of work, including new features, bug fixes, refactoring
+tasks, or research activities. Issues were organised using a set of labels
+tailored to the project, including categories such as classifier model,
+bugs, coding sandbox, and MCQ quiz functionality, alongside default labels.
+This labelling approach allowed for efficient filtering and provided a
+clear overview of the types of work remaining at any stage of development.
+
+Milestones were used to group related issues into time bounded delivery
+targets aligned with the overall project plan. Each milestone corresponded
+to a major phase of development, such as the MVP launch, MCQ system
+completion, classifier integration, and final dissertation submission.
+This structure provided a high level view of progress and helped ensure
+that development remained aligned with key deadlines, including the
+Christmas seminar presentation and the April submission.
+
+When beginning work on a task, a new branch was typically created,
+sometimes linked to a specific issue, and named in a way that reflected
+the functionality being developed, for example \texttt{social\_features}
+or \texttt{code\_sandbox\_v2}. Development was carried out through
+incremental commits with descriptive messages. Upon completion, changes
+were merged back into the main codebase. This workflow maintained a clear
+and navigable project history while supporting parallel development across
+different features, and it left a commit trail that serves as evidence of
+sustained effort across the full development period rather than a last
+minute sprint.
+
+\section{Continuous Integration Pipeline}
+
+A continuous integration pipeline was configured using GitHub Actions
+\cite{githubactions2025} and is defined in the \texttt{.github/workflows}
+directory of the repository. The pipeline triggers on every push to the \texttt{main} branch and on every pull request targeting it. This ensured that no code could be merged into the \texttt{main} branch without first passing automated checks.
+
+The pipeline is divided into three parallel jobs. The frontend job
+installs Node.js 22 and the project dependencies, runs ESLint to check
+for code quality issues, performs a TypeScript type check using
+\texttt{tsc --noEmit} to catch type errors without producing output files,
+and then runs the production build using Vite \cite{vite2025} to confirm
+that the application compiles successfully. Passing build artifacts are
+uploaded for a retention period of seven days. The backend job sets up
+Python 3.11, runs the Black formatter in check mode to verify that the
+code conforms to the project's formatting standard, runs Flake8 to catch
+syntax errors and undefined name references, and compiles every Python
+file in the backend directory to validate syntax. The ML models job runs
+a similar set of checks across the \texttt{ml\_models} directory. A final
+summary job runs only if all three parallel jobs succeed, providing a
+clear single status indicator for the overall health of the pipeline.
+
+This setup served two important purposes. First, it enforced a baseline
+level of code quality automatically, removing the need for manual checks
+on every change and catching regressions immediately. Second, it provided
+confidence when merging feature branches that the integration would not
+break the build. The use of \texttt{continue-on-error: true} on the
+formatting and complexity checks meant that these were informational
+rather than blocking, allowing the pipeline to surface stylistic feedback
+without preventing progress when minor formatting divergences were present.
+This calibration matters: a pipeline that fails on every whitespace
+difference ends up being ignored by its author, whereas a pipeline that
+fails only on genuinely broken builds retains its value as a signal.
+
+\section{Validation and Testing}
+
+Testing was carried out primarily through manual integration testing and
+through the empirical evaluation of the machine learning models on held
+out test sets. Given that this was a solo project and the focus of the
+evaluation chapter is on measurable outcomes rather than on test coverage
+metrics, a full unit test suite was not implemented. A representative
+sample of pytest tests does exist under \texttt{backend/tests}, covering
+core logic such as JWT token round tripping and password hashing, but the
+bulk of validation was done at the integration level, where the behaviour
+that matters to the end user is actually observable. The continuous
+integration pipeline's syntax validation and build checks served as a
+lightweight automated safety net across all three components of the
+codebase.
+
+The machine learning models were evaluated rigorously using train,
+validation, and test splits. For the topic tag classifier a sixty, twenty,
+twenty split was used, with the validation set serving as the basis for
+per label decision threshold optimisation before final evaluation on the
+held out test set. The rationale for this approach is set out in detail
+in the System Design chapter, but the key point is that tuning thresholds
+on the test set would have leaked information and produced optimistic
+estimates of generalisation. Holding out a separate validation set for
+threshold selection, then reporting test set numbers only once at the
+end, is the standard cross validation protocol described by Kohavi
+\cite{kohavi1995crossval}. For the difficulty classifier a five fold cross
+validation strategy was used during hyperparameter search via
+\texttt{RandomizedSearchCV} \cite{bergstra2012random}, which is a more
+computationally efficient alternative to exhaustive grid search when the
+hyperparameter space is large.
+
+The code execution engine was tested manually by submitting known correct
+and intentionally incorrect solutions across each supported language and
+verifying that the test case evaluation logic returned the expected
+outcomes. The end to end question generation pipeline was tested by
+issuing prompts and inspecting the enriched responses, checking that the
+tags and difficulty labels returned were plausible for the generated
+content. Where prompts produced questions that the model then tagged
+implausibly, those cases were logged and fed back into a later round of
+prompt engineering or threshold tuning, which over time reduced the rate
+of surprising outputs.
+
+\section{Technology Selection Criteria}
+
+The choice of specific technologies was guided by a small number of
+consistent criteria. First, each major technology had to be open source
+or freely available at the project's scale, because a solo student project
+cannot justify paid tooling beyond what is strictly necessary. Second,
+each technology had to have active community support and documentation
+sufficient to resolve problems without a commercial support contract.
+Third, where a choice was made between two roughly equivalent options,
+the option with stronger type safety, stronger validation, or stronger
+reproducibility was preferred, on the grounds that these properties
+compound favourably as a codebase grows. FastAPI over Flask, TypeScript
+over plain JavaScript, and Pydantic validation on every request boundary
+are all choices that reflect this preference.

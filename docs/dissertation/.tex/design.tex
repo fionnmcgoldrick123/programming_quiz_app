@@ -1,0 +1,562 @@
+\chapter{System Design}
+
+\section{Overview}
+
+This chapter describes the concrete design of the AI powered quiz and
+coding challenge platform. It builds directly on
+the technology choices justified in the Technology Review, demonstrating
+how those choices were applied to produce a coherent, working system. The
+chapter is organised from coarse to fine grain: the overall architecture
+is presented first, followed by detailed descriptions of each major
+subsystem, the database schema, the machine learning training pipelines,
+the frontend architecture, and the deployment model. Diagrams are used
+throughout to augment the written explanation.
+
+The system consists of three containerised services orchestrated by Docker
+Compose \cite{merkel2014docker,dockercompose2025}: a PostgreSQL 16
+database, a Python FastAPI backend, and a React and TypeScript frontend
+served by Nginx \cite{nginx2025}. These three services are loosely coupled
+through well defined interfaces. The backend exposes a REST API
+\cite{fielding2000rest} conforming to the OpenAPI 3.0 specification
+\cite{openapi2025}, and the frontend communicates exclusively through
+that API using JSON \cite{json2014} over HTTP. No service depends on the
+internal state of any other service, and the only inter service contracts
+are the REST API and the SQL schema.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{./images/design/high_level_system_architecture.png}
+    \caption{High level system architecture showing the three Docker
+    Compose services and their communication paths.}
+    \label{fig:system-architecture}
+\end{figure}
+
+\section{Docker Compose Infrastructure}
+
+The deployment unit of the project is a Docker Compose file declaring
+three services: \texttt{db}, \texttt{backend}, and \texttt{frontend}.
+Each runs in an isolated container but communicates with the others
+over Docker's internal bridge network. Environment variables such as
+database credentials, the OpenAI API key, and the JWT secret are
+injected at runtime from a \texttt{.env} file and never committed to
+version control.
+
+The \texttt{db} service runs the official \texttt{postgres:16-alpine}
+image with a named Docker volume \texttt{pgdata} mounted at
+\texttt{/var/lib/postgresql/data} for persistence across container
+restarts. Health checks via \texttt{pg\_isready} combined with
+\texttt{depends\_on: condition: service\_healthy} ensure the backend
+does not start before the database is ready. The backend container is
+built from a custom Dockerfile based on \texttt{python:3.11-slim} with
+Node.js 22 installed alongside to support the JavaScript and TypeScript
+runtimes required by the code execution engine. The two serialised
+model artefacts, \texttt{topic\_model.pkl} and
+\texttt{difficulty\_model.pkl}, are copied in at build time. The
+application is served by Uvicorn \cite{lathkar2023} listening on port
+8000. The frontend Dockerfile uses a two stage build: in the first,
+\texttt{node:22-alpine} runs \texttt{npm run build} to produce a Vite
+\cite{vite2025} static bundle; in the second, the compiled assets are
+copied into an \texttt{nginx:stable-alpine} image whose
+\texttt{nginx.conf} handles single page application fallback routing,
+gzip compression, and one year cache headers on content hashed assets.
+
+\section{Backend Architecture}
+
+The backend is a FastAPI application \cite{fastapi2025} whose entry
+point is \texttt{main.py}. FastAPI's \texttt{lifespan} context manager
+is used to run \texttt{init\_db()} at startup, which creates the four
+database tables if they do not already exist, using idempotent
+\texttt{CREATE TABLE IF NOT EXISTS} and
+\texttt{ALTER TABLE ... ADD COLUMN IF NOT EXISTS} statements so that
+migrations on an existing database are safe. The application is
+structured around four concerns: AI model integration, machine learning
+inference, code execution, and user management, which includes
+authentication, gamification, and social features.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{./images/design/backend_dependency_architecture.png}
+    \caption{Backend module dependency diagram showing call relationships
+    between the FastAPI entry point, service modules, AI parsers, and
+    machine learning inference wrappers.}
+    \label{fig:backend-deps}
+\end{figure}
+
+\subsection{API Routes}
+
+The FastAPI application exposes the following groups of HTTP endpoints.
+All request and response bodies are validated against Pydantic
+\texttt{BaseModel} subclasses defined in \texttt{pydantic\_models.py}
+\cite{pydantic2025}, which means that malformed or type incorrect input
+is rejected at the API boundary with a descriptive 422 error before it
+reaches any business logic.
+
+\begin{itemize}
+    \item \texttt{POST /prompt}: accepts a \texttt{PromptRequest}, which
+    bundles the user prompt, the quiz type, the target language, and the
+    number of questions; invokes the AI generation pipeline; and returns
+    a list of enriched \texttt{QuizSchema} or
+    \texttt{CodingQuestionSchema} objects.
+    \item \texttt{POST /run-code}: accepts source code and a language
+    identifier, executes the code in a sandboxed subprocess, and returns
+    stdout and stderr.
+    \item \texttt{POST /submit-code}: accepts source code, a language
+    identifier, and a JSON array of test cases; runs the code against
+    each test case; and returns a per case pass or fail result.
+    \item \texttt{POST /model}: toggles the active AI backend between
+    OpenAI and Ollama.
+    \item \texttt{POST /register} and \texttt{POST /login}: user
+    registration and authentication, returning a signed JWT on success.
+    \item \texttt{GET /verify-email} and \texttt{POST /resend-verification}:
+    support the email verification flow that gates first time login.
+    \item \texttt{GET /me}, \texttt{PATCH /me/profile}: retrieve and
+    partially update the authenticated user's profile fields.
+    \item \texttt{POST /add-xp}, \texttt{POST /save-quiz-result}: award
+    experience points and persist a completed quiz result.
+    \item \texttt{GET /user-stats}, \texttt{GET /quiz-history}: retrieve
+    aggregated statistics and recent quiz sessions for the authenticated
+    user.
+    \item \texttt{GET /users/search}, \texttt{GET /users/\{id\}/profile},
+    \texttt{GET /users/\{id\}/stats}: search for users and retrieve public
+    profiles and friends only statistics.
+    \item \texttt{POST /friends/request/\{id\}},
+    \texttt{POST /friends/respond},
+    \texttt{GET /friends/requests},
+    \texttt{GET /friends/requests/count},
+    \texttt{GET /friends},
+    \texttt{GET /friends/count},
+    \texttt{DELETE /friends/\{id\}}: the full social friendship lifecycle.
+    \item \texttt{GET /}, \texttt{GET /health}: root and server status
+    utility endpoints.
+\end{itemize}
+
+\subsection{AI Generation Pipeline}
+
+The AI generation pipeline is the most complex subsystem in the backend.
+The active AI backend is tracked by a global \texttt{current\_model}
+variable in \texttt{ai\_models.py}, toggled via \texttt{POST /model}.
+Both backends use \texttt{httpx.AsyncClient} with a 120 second timeout
+and await the full response before parsing begins, which simplifies the
+parser logic at the cost of not being able to show incremental output.
+
+Once the raw response arrives, the appropriate parser
+(\texttt{parser\_openai.py} or \texttt{parser\_ollama.py}) extracts the
+JSON content from the model's reply. For MCQ quizzes, each question
+object is passed to \texttt{predict\_tags\_for\_question(title,
+question)} to obtain predicted topic tags. For coding quizzes,
+\path{compute\_coding\_metadata()} is called first to extract numeric
+and lexical features (character count, word count, constraint language,
+code tokens), and these features are passed to
+\texttt{predict\_difficulty\_for\_question()} alongside the question's
+AI generated metadata to obtain a difficulty label. Both enrichments
+are attached to the schema object before it joins the output list. The
+Ollama parser additionally strips option prefix characters such as
+\texttt{"A: "} from MCQ options, and the OpenAI backend wraps parsing
+in a three attempt retry on \texttt{json.JSONDecodeError},
+\texttt{KeyError}, or \texttt{ValueError}.
+
+\subsection{Machine Learning Inference Pipeline}
+
+\textbf{Model loading.} Both machine learning models are loaded into
+memory as in process singletons. They are deserialised from their
+\texttt{.pkl} artefacts once and held in module level variables for the
+lifetime of the Uvicorn process. The difficulty model
+(\texttt{difficulty\_model.pkl}) is loaded eagerly at module import
+time in \texttt{difficulty\_service.py}. The \texttt{\_load\_model()}
+function is called at module level, outside any function body, so the
+\texttt{joblib.load} \cite{joblib2025} call executes when Uvicorn first
+imports the module during startup. The topic model
+(\texttt{topic\_model.pkl}) is loaded lazily: \texttt{\_load\_model()}
+is called inside \texttt{predict\_topics()} and returns immediately if
+the module level \texttt{\_pipeline} variable is already populated.
+This means the topic model is deserialised on the first quiz generation
+request after startup, then retained in memory for all subsequent
+requests. Both strategies ensure that the inference cost per request is
+limited to a single \texttt{pipeline.predict\_proba()} call and a
+threshold comparison, which is negligible compared to the AI generation
+latency.
+
+A compatibility fix is applied when loading the difficulty model: the
+helper functions defined in the \texttt{\_\_main\_\_} namespace at
+training time are re injected into \texttt{sys.modules['\_\_main\_\_']}
+before \texttt{joblib.load} is called, preventing an
+\path{AttributeError} during deserialisation.
+
+\textbf{Topic tag prediction.} The topic tag classifier is a scikit
+learn \texttt{Pipeline} \cite{pedregosa2011,buitinck2013api} wrapping a
+\texttt{FeatureUnion} of two \texttt{TfidfVectorizer} instances (word
+level unigram to trigram and character level three to five n grams)
+followed by a \texttt{OneVsRestClassifier} wrapping a
+\texttt{LogisticRegression} estimator with balanced class weights. At
+inference time, the \path{predict\_topic\_from\_parts(title,
+description, top\_n=5)} function concatenates the title and description
+with a period separator, calls \texttt{pipeline.predict\_proba()} to
+obtain a probability score for each of the trained labels, applies the
+per label optimised thresholds (stored in the \texttt{.pkl} bundle
+alongside the pipeline and the \texttt{MultiLabelBinarizer}), and
+returns up to five tags sorted by descending probability. If no label
+exceeds its threshold, the label with the highest probability is
+returned anyway, guaranteeing that every generated question carries at
+least one meaningful topic annotation.
+
+\textbf{Difficulty prediction.} The difficulty classifier is a scikit
+learn \texttt{Pipeline} wrapping a \texttt{ColumnTransformer} that
+applies separate preprocessing paths to numeric and text features,
+followed by the best performing ensemble estimator selected during
+training. The numeric path applies \texttt{SimpleImputer(strategy='median')}
+followed by \texttt{StandardScaler} to the numeric features derived
+from submission statistics and problem description analysis. The text
+path applies a \texttt{FeatureUnion} of word level and character level
+\texttt{TfidfVectorizer} instances to the raw description text. At
+inference time, \texttt{predict\_difficulty\_for\_question(schema)}
+receives a \texttt{CodingQuestionSchema} object, maps its fields to the
+column names the model expects, calls
+\texttt{extract\_description\_features()} to derive the text and keyword
+features from the question body, assembles a single row pandas DataFrame
+\cite{mckinney2010pandas}, and calls \texttt{pipeline.predict()} to
+obtain one of the three labels: easy, medium, or hard. If the model is
+unavailable, for example if the \texttt{.pkl} file is missing from the
+image, the function falls back to returning \texttt{medium}.
+
+\subsection{Difficulty Classifier Training Pipeline}
+
+The difficulty classifier training pipeline, implemented in
+\path{ml_models/difficulty_classifier/difficulty_predictor.py},
+merits a more detailed description. The dataset is constructed by
+iterating over the CodeNet \cite{puri2021codenet} per problem submission
+CSV files and aggregating per problem statistics (mean CPU time, mean
+memory, mean accepted code size, and acceptance rate). Problems with
+fewer than ten submissions are dropped because their aggregates are
+statistically meaningless. Problem descriptions are extracted from the
+corresponding HTML files and parsed to produce a plain text form, a
+word count, a character count, a count of numeric constraint tokens,
+and a set of binary keyword flags indicating the presence of
+algorithmic vocabulary such as recursion, dynamic programming, graph,
+sort, search, string, math, greedy, stack, and complexity.
+
+Labels are derived from acceptance rate by percentile binning: the top
+tercile by acceptance rate is labelled easy, the middle tercile medium,
+and the bottom tercile hard. This produces a balanced three class
+dataset by construction. The resulting training matrix contains thirty
+four numeric features (base statistics, log transforms, ratios, and
+interaction terms) plus one text feature that is subsequently expanded
+into word and character n grams by the preprocessor. The split uses
+stratified sampling to produce a sixty, twenty, twenty train, validation,
+and test partition. Seven candidate models are trained using
+\texttt{RandomizedSearchCV} \cite{bergstra2012random} with forty
+iterations and five fold cross validation, scoring on F1 macro. The
+best model, XGBoost \cite{chen2016xgboost} in the final run, is
+retrained on the combined train and validation sets and evaluated once
+on the held out test set. The full pipeline, including the
+\texttt{LabelEncoder}, is serialised to \texttt{difficulty\_model.pkl} via joblib.
+
+\subsection{Topic Tag Classifier Training Pipeline}
+
+The topic tag training pipeline, in \texttt{ml\_models/tag\_classifier/train.py},
+follows a similar structure but is adapted to the multi label nature of
+the problem. The LeetCode \cite{leetcode2025} CSV is loaded, rows with
+null descriptions or null tag lists are dropped, and the tag strings
+are parsed from their stored representation into lists. Tags appearing
+in fewer than sixty problems are filtered out, and any row with no
+remaining tags is dropped. A \texttt{MultiLabelBinarizer} converts the
+tag lists to binary indicator vectors and is saved alongside the model
+for use at inference.
+
+The training matrix is a combined \path{cleaned\_title + '. ' +
+cleaned\_description} string per problem. The feature pipeline is a
+\texttt{FeatureUnion} of a word level TF IDF vectoriser (up to fifty
+thousand features, unigrams through trigrams) and a character level
+TF IDF vectoriser (up to twenty thousand features, three to five
+character n grams). Four candidate architectures are trained using
+\texttt{GridSearchCV} with three fold cross validation, scoring on F1
+micro: logistic regression with word features only, logistic regression
+with combined word and character features, an SGD classifier with word
+features, and a classifier chain \cite{read2011classifierchains} of
+logistic regressions with combined features.
+
+A two stage threshold optimisation is then performed on the validation
+set. Stage A finds a single global optimum threshold by sweeping from
+0.15 to 0.70 in steps of 0.01 and choosing the value that maximises F1
+micro. Stage B computes a per label optimum by sweeping each label
+independently from 0.10 to 0.80 in steps of 0.025. The final per label
+threshold is a blend of the per label optimum and the global optimum
+with a shrinkage factor of 0.5. This shrinkage is a conservative bet
+against overfitting: pure per label optimisation on a validation set
+with small support per label is vulnerable to noise, whereas pure
+global optimisation discards the benefit of knowing that rare labels
+need lower thresholds. The 0.5 blend was chosen because it exactly
+halves the influence of the per label sample on the final threshold,
+which is a principled starting point when there is no stronger prior.
+The best model is then retrained on train plus validation combined and
+evaluated once on the test set, and the pipeline, the binarizer, the
+thresholds, and the class list are all serialised together in
+\texttt{topic\_model.pkl}.
+
+\subsection{Code Execution Engine}
+
+The code execution engine is implemented in
+\texttt{services/code\_executor.py} and runs inside the FastAPI process
+rather than as a separate service. For both \texttt{POST /run-code} and
+\texttt{POST /submit-code}, the engine writes the user's source code to
+a temporary file using Python's \texttt{tempfile} module, spawns the
+appropriate runtime as a child process using \texttt{subprocess.run()},
+captures stdout and stderr, and deletes the temporary file in a
+\texttt{finally} block before returning. A five second timeout is
+enforced on every subprocess call. Submissions that exceed this limit
+are terminated and a timeout message is returned to the caller.
+
+The runtime invocation strategy varies by language. Python uses the
+\texttt{python} interpreter directly. JavaScript uses \texttt{node}.
+TypeScript is executed directly using Node.js 22 with the
+\texttt{--experimental-strip-types} flag, which removes type annotations
+at runtime and eliminates the need for a separate transpilation step.
+Java requires a two step process: \texttt{javac} compiles the source file
+to a \texttt{.class} file, then \texttt{java} executes it. C\# uses the
+\texttt{dotnet} CLI. Node.js 22 is installed in the backend Docker image
+to support both JavaScript and TypeScript execution. The Python
+interpreter is provided by the base image.
+
+For test case evaluation (\texttt{POST /submit-code}), the engine
+iterates over the list of test cases provided in the request body. For
+Python submissions, the function name is extracted via a regex, then a
+test harness is appended that calls the function with the supplied
+input arguments and prints a marked result line to stdout. The harness
+output is parsed and compared to the expected value. The full list of
+per case results is returned to the frontend for rendering.
+
+\subsection{Authentication and User Management}
+
+Authentication follows the stateless JWT pattern standardised in IETF
+RFC 7519 \cite{jwt2015}. When a user registers, their password is
+hashed using bcrypt \cite{provos1999bcrypt} with a generated salt
+before storage. On login, the stored hash is compared to the provided
+password using \texttt{bcrypt.checkpw()}. If it matches, a JWT is
+generated using PyJWT with the user's id as the subject claim and a
+twenty four hour expiry encoded in the \texttt{exp} claim. The token
+is signed using HMAC SHA256 with a secret loaded from the environment.
+The frontend stores the token in \texttt{localStorage} and includes it
+in the \texttt{Authorization: Bearer <token>} header on all
+authenticated requests. Backend route handlers that require
+authentication call \texttt{verify\_token()} from \texttt{core/auth.py},
+which decodes and validates the JWT and returns the user ID for use
+in the handler.
+
+Email verification is enforced at registration time. A secure random
+token generated by \texttt{secrets.token\_urlsafe(32)} is stored on the
+user row together with a timestamp. A verification email is sent via
+SMTP (with TLS), and the user cannot log in until the link in that
+email is clicked. The verification endpoint only accepts tokens younger
+than twenty four hours, a rule enforced at the SQL level using
+\texttt{verification\_sent\_at > NOW() - INTERVAL '24 hours'}.
+
+The experience point and levelling system is implemented in
+\texttt{services/users.py}. When a quiz result is submitted via
+\texttt{POST /save-quiz-result}, experience is awarded based on the
+number of correct answers. The threshold for levelling up follows the
+formula \texttt{xp\_for\_level = 100 * level}, so a level 1 user needs
+100 experience points to reach level 2, a level 2 user needs 200 to
+reach level 3, and so on. When accumulated experience meets or exceeds
+the threshold, the level is incremented and the experience pool is
+reduced by the threshold amount, allowing carry over. A \texttt{while}
+loop handles the rare case where a single grant is large enough to
+cover multiple levels at once.
+
+\section{Database Design}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{./images/design/database_entity_diagram.png}
+    \caption{Entity relationship diagram for the four database tables. The users table is the central entity, with one to many relationships to both quiz\_results and quiz\_sessions. The friendships table models a directed self referential relationship on users, with a unique constraint preventing duplicate requests and a check constraint preventing self friendship.}
+    \label{fig:database-design}
+\end{figure}
+
+The database schema consists of four tables: \texttt{users},
+\texttt{quiz\_results}, \texttt{friendships}, and \texttt{quiz\_sessions}.
+The schema is created at application startup by \texttt{init\_db()}
+using raw SQL \texttt{CREATE TABLE IF NOT EXISTS} statements, meaning
+the tables are created automatically on first run without requiring a
+separate migration tool.
+
+\subsection{Users Table}
+
+The \texttt{users} table is the central entity of the schema. In
+addition to authentication fields (\texttt{email}, \texttt{password\_hash}),
+it stores profile data (\texttt{display\_name}, \texttt{bio},
+\texttt{avatar\_url}), gamification state (\texttt{exp}, \texttt{level}),
+and email verification state (\texttt{email\_verified},
+\texttt{verification\_token}, \texttt{verification\_sent\_at},
+\texttt{verified\_at}). The \texttt{email} column carries a
+\texttt{UNIQUE} constraint, enforcing that no two accounts share an
+email address at the database level, as a complement to the application
+level duplicate check.
+
+\subsection{Quiz Results Table}
+
+The \texttt{quiz\_results} table records the outcome of completed quiz
+sessions. Notably, the full AI generated quiz content is not persisted
+in this table. It exists only in React component state for the duration
+of the session. Only the metadata necessary for the user's history and
+statistics is written to the database: the prompt that generated the
+quiz, the quiz type, the score, the predicted topic tags (stored as a
+PostgreSQL \texttt{TEXT[]} native array column), the programming
+language if applicable, and the completion timestamp. This design
+deliberately keeps the database lean and avoids the cost of serialising
+and storing potentially large JSON documents per session. Where a full
+record of the session is needed, the \texttt{quiz\_sessions} table
+stores the complete question set as a \texttt{JSONB} column, and this
+supports the recent history view.
+
+\subsection{Friendships Table}
+
+The \texttt{friendships} table models the social graph as a directed
+edge list. Each row represents a friendship request from
+\texttt{requester\_id} to \texttt{addressee\_id} with a status of
+either \texttt{pending} or \texttt{accepted}. Two database level
+constraints prevent invalid states: a \texttt{UNIQUE(requester\_id,
+addressee\_id)} constraint prevents duplicate requests between the same
+pair of users, and a \texttt{CHECK (requester\_id != addressee\_id)}
+constraint prevents self friendship. A confirmed mutual friendship is
+represented by a single row with \texttt{status = 'accepted'}. The
+application layer treats both users as friends regardless of which
+direction the original request was sent.
+
+\section{Frontend Architecture}
+
+The frontend is a single page application built with React
+\cite{react2013} and TypeScript \cite{typescript2025}, compiled by Vite
+\cite{vite2025}. At runtime the browser loads a single HTML document
+(\texttt{index.html}) containing script tags pointing to the Vite
+generated JavaScript bundles. React Router handles client side
+navigation, mapping URL paths to page components without triggering
+full page reloads. Nginx's \texttt{try\_files \$uri /index.html}
+directive ensures that direct URL access or page refresh always returns
+the root HTML document so that React Router can take control.
+
+\subsection{Route Structure}
+
+The application exposes eleven routes, defined in \texttt{App.tsx}. Six
+of these routes are protected by an authentication guard that redirects
+unauthenticated users to the login page: \texttt{/prompt},
+\texttt{/quiz}, \texttt{/code-sandbox}, \texttt{/profile},
+\texttt{/social}, and \texttt{/stats}. The remaining five routes are
+publicly accessible: \texttt{/} (landing), \texttt{/login},
+\texttt{/register}, \texttt{/about}, and \texttt{/user/:userId} (public
+profile). This separation reflects the application's requirement that
+content generation and social features are gated behind an account,
+while public profiles and informational pages are accessible without
+authentication.
+
+\subsection{State Management}
+
+Global application state is managed by a single hand rolled
+\texttt{AuthContext} built from React's \texttt{createContext} and
+\texttt{useState} primitives. The context exposes five values:
+\texttt{user} (the authenticated user object), \texttt{token} (the raw
+JWT string), \path{isAuthenticated}, \texttt{isLoading}, and two
+mutation functions \texttt{login} and \texttt{logout}. On login, both
+the user object and the token are written to \texttt{localStorage} so
+that the session survives a page refresh. On page load,
+\texttt{AuthContext} reads from \texttt{localStorage} to rehydrate the
+session without requiring a new login for the current browser tab.
+
+All other state, quiz content, editor content, social list data, is
+local component state managed with \texttt{useState} hooks inside the
+relevant page component. This approach avoids the complexity of a
+global state management library for a codebase of this size, and the
+clear separation between global authentication state and local UI
+state makes the data flow straightforward to reason about.
+
+\subsection{Key Page Components}
+
+\texttt{PromptPage} is the primary entry point to quiz generation. It
+renders the \texttt{PromptForm} component, which collects the user's
+topic prompt, quiz type (MCQ or coding), programming language (for
+coding quizzes), and number of questions. On submission, it posts to
+\texttt{POST /prompt} and awaits the complete enriched quiz payload.
+On success, it navigates to either \texttt{/quiz} or
+\texttt{/code-sandbox}, passing the quiz data via React Router's
+location state.
+
+\texttt{QuizPage} receives the MCQ quiz data from location state and
+renders the questions one at a time, tracking the user's selected
+answer and score in local state. Session state is also persisted
+to \texttt{sessionStorage} under a key derived from the user id and
+session id, so that a refresh of the page does not lose in progress
+answers.
+
+\texttt{CodeSandboxPage} renders an interactive coding environment for
+the generated coding challenges, built on top of the Monaco Editor
+\cite{monaco2025}. The editor, language selector, test case panel, and
+results panel are all managed as local state within this component.
+Submissions are sent to \texttt{POST /submit-code} and the per case
+pass or fail results are rendered inline next to the expected versus
+actual output.
+
+\texttt{SocialPage} handles the full friends lifecycle: searching for
+users by display name, sending friend requests, accepting or rejecting
+incoming requests, and viewing the current friends list.
+
+\section{End to End Data Flow}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{./images/design/end_to_end_data_flow.png}
+    \caption{End to end data flow for a quiz generation session, showing the request path from browser through JWT authentication, AI generation via OpenAI or Ollama, and ML enrichment. MCQ questions receive a predicted difficulty label only, while coding challenges receive both difficulty and topic tags. Both models are loaded at startup as in process singletons. The session concludes with results persisted and experience points awarded.}
+    \label{fig:end-to-end}
+\end{figure}
+
+To make the interaction between components concrete, this section
+traces the complete path of a quiz generation and submission session.
+The authenticated user submits a form at \texttt{/prompt} requesting
+five Python coding challenges on a chosen topic. The browser sends
+\texttt{POST /prompt} with the bearer JWT in the request header, and
+FastAPI validates the body against the \texttt{PromptRequest} Pydantic
+model before any handler logic runs. \texttt{ai\_models.py} prepends
+the coding prompt template to the user's topic and dispatches the full
+prompt to the active backend via \texttt{httpx.AsyncClient} with a 120
+second timeout. When the response arrives, the parser extracts the
+array of question objects and enriches each one: topic tags are
+obtained from \texttt{predict\_tags\_for\_question()} and a difficulty
+label from \texttt{predict\_difficulty\_for\_question()}, both of
+which consult their in memory model singleton. The enriched
+\texttt{CodingQuestionSchema} list is serialised and returned, and the
+frontend stores it in local state before navigating to
+\texttt{/code-sandbox}. Submissions from the sandbox are sent to
+\texttt{POST /submit-code}, executed against the stored test cases by
+the code executor, and the pass or fail result list is rendered inline.
+On session completion, \texttt{POST /save-quiz-result} writes a
+\texttt{quiz\_results} row and awards experience points, levelling up
+the user if the threshold is crossed.
+
+\section{Deployment Architecture}
+
+The system is deployed locally using Docker Compose on a single host.
+Containers communicate over Docker's default bridge network by service
+name (the backend resolves the database at hostname \texttt{db}, and
+Nginx proxies requests to \texttt{backend:8000}). The containerised
+architecture is inherently portable: the same \texttt{docker-compose.yml}
+could run on any Linux host provisioned on AWS EC2, Google Compute
+Engine, or DigitalOcean with no code changes. A production deployment
+would additionally require TLS termination (Nginx with Let's Encrypt),
+a process supervisor, and a managed database service to decouple
+database lifecycle from application containers.
+
+\section{Design Decisions and Standards Compliance}
+
+The machine learning inference pipeline follows the scikit learn
+\texttt{Pipeline} convention \cite{buitinck2013api}, which ensures that
+all preprocessing steps are encapsulated in a single serialisable
+object. This prevents training and serving skew: the same
+\texttt{TfidfVectorizer} vocabulary and IDF weights, and the same
+\texttt{StandardScaler} parameters that were fitted on the training
+data, are applied at inference time without any manual re
+implementation. Separating the training code from the inference code
+(the training scripts live in \texttt{ml\_models/}, the inference
+wrappers live in \texttt{backend/ml/}) is a standard pattern for
+productionising machine learning models and reflects the principle
+that the artefact produced by training is a self contained, deployable
+unit. The REST API conforms to the OpenAPI 3.0 specification
+\cite{openapi2025}, authentication uses JWT (RFC 7519 \cite{jwt2015})
+with HMAC SHA256 signing, and password storage uses bcrypt
+\cite{provos1999bcrypt}, consistent with OWASP guidance
+\cite{owasp2021}.

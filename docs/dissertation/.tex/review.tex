@@ -1,0 +1,397 @@
+\chapter{Technology Review}
+
+\section{Overview}
+
+This chapter provides a detailed examination of the technologies, tools,
+frameworks, datasets, and algorithmic approaches that underpin the system
+described in this dissertation. It is organised to mirror the architecture
+of the project itself, moving from the AI generation layer through the
+machine learning components, down to the backend infrastructure, database,
+and frontend. Where possible, references are drawn from peer reviewed
+publications, official standards bodies, and authoritative technical
+documentation. The purpose of this chapter is to demonstrate that each
+technology choice was informed by research and that the overall system
+design is grounded in established principles from both software
+engineering and applied machine learning. Each section tries to explain
+what the technology is, why it was chosen for this project, and where
+possible how it compares to the alternatives that were considered.
+
+\section{Large Language Models and Generative AI}
+
+\subsection{The Emergence of Large Language Models}
+
+The capacity of this platform to generate quiz questions and coding
+challenges on demand rests on large language models: neural networks
+trained on enormous text corpora, capable of producing coherent output
+in response to a natural language prompt. The architectural basis is
+the Transformer introduced by Vaswani et al. \cite{vaswani2017attention},
+which replaced the recurrent and convolutional structures of earlier
+sequence models with a purely attention based mechanism. Attention
+allows every position in a sequence to attend directly to every other
+position, removing the sequential bottleneck that had limited previous
+architectures and making it practical to train far larger models.
+
+Subsequent work established that scaling these models produced
+qualitative capability improvements. The bidirectional BERT model of
+Devlin et al. \cite{devlin2019bert} showed that pre training on
+unlabelled text followed by task specific fine tuning could set new
+state of the art results across natural language understanding
+benchmarks. The GPT line scaled autoregressive decoder only models
+instead, and the work of Brown et al. \cite{brown2020gpt3} on GPT 3
+demonstrated that scaling to 175 billion parameters produced few shot
+and zero shot task performance, meaning these models could complete
+tasks from a short description alone. This established the prompt
+based interaction pattern this project relies on: a structured prompt
+is sent to the model describing the desired output, and the model
+generates a conforming response.
+
+The project's primary backend is \texttt{gpt-4o-mini}, accessed through
+the OpenAI API, a smaller, cost efficient member of the GPT 4 family
+suited to reliable instruction following. A secondary backend using
+Ollama \cite{ollama2025} with the \texttt{llama3.1:8b} model, descended
+from Meta's LLaMA work \cite{touvron2023llama}, is also supported,
+enabling locally hosted generation without reliance on an external API.
+Abstracting both backends behind a common interface in
+\texttt{ai\_models.py} means the system is not locked into any single
+provider.
+
+\subsection{Prompt Engineering}
+
+Since LLMs are prompted rather than fine tuned in this project, output
+quality depends heavily on prompt construction, a practice known as
+prompt engineering \cite{liu2023promptsurvey}. The system uses two
+prompt templates (\texttt{prompt\_guide.txt} for MCQ generation and
+\texttt{coding\_prompt\_guide.txt} for coding challenges), each
+specifying a strict JSON output schema to constrain the model to
+produce parseable structured responses. This draws on the established
+practice of using examples and formatting constraints in prompts, as
+described by Brown et al. \cite{brown2020gpt3}. Recent work on chain
+of thought prompting by Wei et al. \cite{wei2022chainofthought} has
+shown that intermediate reasoning steps can improve output on multi
+step tasks; the structured schema used here serves as a lighter weight
+output scaffold.
+
+A known limitation of prompt based integration is that LLMs do not
+always produce strictly valid JSON. OpenAI has since introduced a
+structured output mode \cite{openai2024structured} that enforces schema
+conformance at the API level. This was not adopted at the time of
+development but is identified as a clear improvement in the Conclusion.
+
+\section{Machine Learning Foundations}
+
+\subsection{Text Representation with TF IDF}
+
+Both machine learning classifiers in this project use term frequency
+inverse document frequency, or TF IDF, as the primary method of
+transforming text into numerical feature vectors. TF IDF was introduced
+by Sp\"{a}rck Jones \cite{sparck1972} in 1972 as a term weighting scheme
+for information retrieval. The core insight is that a term's importance
+to a document is proportional to how often it appears in that document,
+but inversely proportional to how often it appears across the entire
+corpus. Common words like \texttt{the} or \texttt{and} receive low
+weights because they appear in almost every document and therefore carry
+little discriminative information. Rare, domain specific terms receive
+high weights because their presence is more informative. Salton and
+Buckley \cite{salton1988tfidf} provided a systematic comparison of
+alternative weighting schemes and established the form of TF IDF that is
+now standard, and Ramos \cite{ramos2003tfidf} offers a more accessible
+treatment suited to applied settings.
+
+Formally, for a term $t$ in a document $d$ within a corpus $D$, the
+TF IDF weight is defined as:
+\[
+\text{tf idf}(t, d, D) = \text{tf}(t, d) \times \log \left( \frac{|D|}{|\{d \in D : t \in d\}|} \right)
+\]
+
+This project uses scikit learn's \texttt{TfidfVectorizer}
+\cite{pedregosa2011} with sublinear term frequency scaling, which
+replaces the raw term frequency $\text{tf}(t, d)$ with $1 + \log(\text{tf}(t, d))$
+to reduce the dominance of very frequent terms within a single document.
+Two separate vectorisers are combined using \texttt{FeatureUnion}: a word
+level vectoriser capturing unigrams through trigrams, and a character
+level vectoriser operating on three to five character n grams. The
+character level component is particularly valuable for code adjacent
+text, where tokens such as \texttt{O(n)}, \texttt{dp[i]}, and
+\texttt{arr[j]} form meaningful patterns that a word level tokeniser
+would either split or discard. A word tokeniser typically treats
+punctuation as a boundary and therefore cannot learn that \texttt{dp[i]}
+is a recognisable motif, whereas a character n gram vectoriser will
+naturally capture \texttt{dp[} and \texttt{]} as features.
+
+\subsection{Logistic Regression}
+
+The topic tag classifier uses logistic regression as its core estimator,
+implemented within scikit learn \cite{pedregosa2011,buitinck2013api}.
+Logistic regression is a discriminative linear classifier that models
+the probability of class membership as a sigmoid function of a linear
+combination of input features. For a feature vector $\mathbf{x}$ and
+weight vector $\mathbf{w}$:
+\[
+P(y = 1 \mid \mathbf{x}) = \sigma(\mathbf{w}^T \mathbf{x} + b) = \frac{1}{1 + e^{-(\mathbf{w}^T \mathbf{x} + b)}}
+\]
+
+Parameters are estimated by maximising the log likelihood of the training
+labels under this model, with L2 regularisation controlled by the
+hyperparameter $C$ to prevent overfitting. The \texttt{class\_weight=}
+\texttt{'balanced'} setting was used to adjust class weights inversely
+proportional to their frequency in the training data, a standard
+technique for addressing class imbalance \cite{japkowicz2002imbalance}.
+Logistic regression was chosen over more complex models for this
+component because TF IDF features tend to be high dimensional and
+sparse, and linear classifiers are well known to perform competitively
+in this regime \cite{hastie2009esl}. Deeper models such as transformer
+based encoders would likely yield better absolute performance, but at
+significantly higher inference cost, which would defeat the design goal
+of sub second enrichment per question.
+
+\subsection{Multi Label Classification}
+
+Because a single coding problem can belong to multiple algorithmic
+categories simultaneously (for example dynamic programming and binary
+search together), topic tagging is inherently a multi label
+classification problem \cite{zhang2014multilabel}. This project uses
+scikit learn's \texttt{OneVsRestClassifier}, which trains one
+independent binary classifier per label. The \texttt{MultiLabelBinarizer}
+transforms the list of string tags into a binary vector of length
+equal to the unique label count \cite{pedregosa2011}. An alternative,
+the classifier chain of Read et al. \cite{read2011classifierchains},
+was also evaluated but did not improve on the simpler one versus rest
+approach on the LeetCode corpus.
+
+The decision threshold was tuned per label on the validation set
+rather than using a default 0.5 for every label. Lipton et al.
+\cite{lipton2014thresholding} show that the F1 maximising threshold
+depends on the positive class base rate and cannot be assumed constant.
+The system uses a shrinkage regularised variant in which the per label
+optimum is blended with a single global optimum to prevent overfitting
+on rare labels where the validation sample is small.
+
+\subsection{Gradient Boosting for Difficulty Prediction}
+
+The difficulty classifier uses ensemble methods, comparing Random
+Forest \cite{breiman2001randomforests}, HistGradientBoosting, and
+Gradient Boosting estimators from scikit learn \cite{pedregosa2011}
+with XGBoost \cite{chen2016xgboost}. Gradient boosting, as formalised
+by Friedman \cite{friedman2001gradient}, builds an ensemble of shallow
+decision trees by fitting each successive tree to the residuals of the
+previous ensemble. The \texttt{HistGradientBoostingClassifier} bins
+continuous features into discrete histograms before splitting,
+dramatically reducing training time and handling missing values
+natively. Linear SVMs \cite{cortes1995svm} were also evaluated as a
+baseline. Model selection used five fold cross validation with
+\texttt{RandomizedSearchCV} \cite{bergstra2012random}, scoring on F1
+macro to ensure balance across difficulty classes. Random search is
+preferred to grid search for larger hyperparameter spaces because, as
+Bergstra and Bengio show, it explores more distinct values of the
+important hyperparameters for the same computational budget.
+
+\subsection{Proxy Labels and Class Imbalance}
+
+The CodeNet dataset \cite{puri2021codenet} contains no human assigned
+difficulty labels, so this project uses acceptance rate as a proxy,
+binning problems into terciles: the top third labelled easy, the
+middle medium, and the bottom hard. Using proxy labels is an
+established technique in weakly supervised learning
+\cite{zhou2017weaksupervision}. A noisy, cheap to obtain label is
+substituted for an expensive authoritative one, and the model is
+trained to recover the underlying signal despite the noise.
+
+Class imbalance is a more serious issue for the topic classifier. The
+LeetCode corpus is severely imbalanced: the Array tag appears on more
+than a thousand problems while Depth First Search appears on fewer
+than thirty. Japkowicz and Stephen \cite{japkowicz2002imbalance}
+review the common mitigations, including cost sensitive learning,
+oversampling, and undersampling. The \texttt{class\_weight='balanced'}
+setting used in the logistic regression base classifier is an instance
+of cost sensitive learning. Synthetic oversampling via SMOTE
+\cite{chawla2002smote} was considered but not adopted, as its
+interaction with high dimensional sparse TF IDF vectors is not
+straightforwardly meaningful.
+
+\section{Datasets}
+
+\subsection{LeetCode Dataset for Topic Tag Classification}
+
+The topic tag classifier was trained on a LeetCode derived dataset obtained from Kaggle \cite{kaggleleetcode2025}, distributed as a CSV file containing problem titles, descriptions in HTML format, and associated topic tags. LeetCode is a widely used competitive programming and interview preparation platform, and its problems have well established community assigned tags such as Array, Hash Table, Dynamic Programming, and Two Pointers. After cleaning, parsing multi value tag strings, and filtering out tags appearing in fewer than sixty examples (to remove labels with insufficient training signal), this dataset provided a realistic and domain appropriate training corpus for the tagging task. An initial exploratory analysis on the filtering threshold established that too low a threshold admitted labels where the classifier could not learn any useful pattern, while too high a threshold collapsed the problem into a handful of very common tags that were already trivially easy to predict.
+
+\subsection{IBM Project CodeNet}
+
+The difficulty classifier was trained on IBM Project CodeNet
+\cite{puri2021codenet}, published by Puri et al. at NeurIPS 2021.
+CodeNet is a large scale dataset containing approximately fourteen
+million code samples across 4,053 competitive programming problems in
+fifty five programming languages. Each problem submission is annotated
+with metadata including its acceptance status, CPU runtime, memory
+usage, and code size. The dataset was constructed from two online
+judging platforms and has been used widely in research on AI for code.
+
+For this project, per problem statistics were aggregated from
+individual submission CSV files, and problem descriptions were parsed
+from HTML to extract lexical and structural features. The scale and
+richness of CodeNet's metadata made it the most suitable publicly
+available dataset for engineering the numeric and textual features
+required by the difficulty model. The dataset is released with a
+permissive licence, which was a practical consideration for a final
+year project: no restrictive terms constrain how the derived model
+artefacts are used or distributed.
+
+\section{Backend Framework: FastAPI}
+
+The backend is built using FastAPI \cite{fastapi2025}, a Python web
+framework released in 2018 by Sebasti\'{a}n Ram\'{i}rez, layered on
+Starlette \cite{starlette2025} for asynchronous request handling and
+Pydantic \cite{pydantic2025} for data validation. Routes declare the
+types of their parameters and return values using Python type hints,
+which FastAPI uses to automatically validate incoming requests,
+serialise responses, and generate interactive OpenAPI documentation.
+Independent benchmarks place FastAPI among the fastest Python
+frameworks, comparable in throughput to Node.js and Go when run under
+the Uvicorn ASGI server \cite{fastapi2025}.
+
+FastAPI was chosen over Flask and Django REST Framework for two
+reasons. Its native async support allows the backend to handle
+concurrent AI API calls without blocking, which matters because AI
+generation latency dominates overall request time. Automatic Pydantic
+validation removes a large category of defensive checking code from
+route handlers. Lathkar's book
+\cite{lathkar2023} provides a comprehensive treatment of the
+framework's async architecture. All request and response structures
+are defined as Pydantic \texttt{BaseModel} subclasses, so malformed
+input is caught at the API boundary and never reaches business logic,
+a pattern of edge validation that reduces defensive code and eases
+diagnosis of failures \cite{martin2008cleancode}.
+
+\section{Database: PostgreSQL}
+
+PostgreSQL \cite{postgres2025} is used as the relational database,
+accessed through \texttt{psycopg} version 3 with a \texttt{dict\_row}
+factory. PostgreSQL is a mature, open source, object relational
+database with roots in the POSTGRES project at UC Berkeley
+\cite{stonebraker1986postgres}, ACID compliant since 2001 and
+implementing multi version concurrency control. The schema stores
+user accounts, profiles, quiz results, experience and levelling data,
+and the social graph of friendships. A relational database was chosen
+over a document store because the social features involve many to many
+relationships with status qualified edges, which benefit from
+normalised modelling and join based querying. Native PostgreSQL
+features used include \texttt{TEXT[]} array columns (for topic tags on
+quiz results), \texttt{JSONB} columns (for full quiz session content),
+and \texttt{CHECK} constraints (to enforce at the database level that
+a user cannot friend themselves).
+
+TablePlus \cite{tableplus2025} was used throughout development as the primary
+graphical interface for inspecting and managing the PostgreSQL database. As a
+native GUI client, it supports direct connection to PostgreSQL and provides
+inline editing of rows and table structure, as well as advanced filtering to
+quickly locate specific records. During development, TablePlus served as the
+main tool for verifying schema correctness, manually inspecting table contents after test runs, and executing ad hoc queries to debug application behaviour. Its built-in SQL editor with syntax highlighting and the ability to split query results across multiple tabs made it straightforward to cross-reference data across the user accounts, quiz results, and friendships tables simultaneously. The code review feature and snapshot capability also provided a safety net when making direct modifications to the development database, ensuring unintended changes could be identified before being committed.
+
+\section{Containerisation: Docker and Docker Compose}
+
+The entire application is containerised using Docker
+\cite{merkel2014docker}. Docker packages applications and their
+dependencies into lightweight containers that run as host processes
+isolated via Linux kernel namespaces and control groups. Its key
+promise, that a containerised application behaves identically wherever
+it runs, matters for a project of this complexity, where the backend
+depends on a specific Python version, Node.js for parts of the code
+execution engine, and pre trained model artefacts. Docker Compose
+\cite{dockercompose2025} orchestrates multiple containers
+declaratively in a single YAML file. Three services are defined:
+PostgreSQL, the Python backend, and the React frontend served by
+Nginx. The backend Dockerfile installs Python 3.11 slim with Node.js
+22 alongside for the JavaScript and TypeScript runtimes. The frontend
+uses a two stage build: Node 22 alpine produces the Vite artefact,
+which is served by Nginx stable alpine with single page fallback
+routing, gzip compression, and one year cache headers on hashed
+assets.
+
+\section{Frontend: React and TypeScript}
+
+The frontend is built using React \cite{react2013} and TypeScript
+\cite{typescript2025}, compiled by Vite \cite{vite2025}. React is an
+open source JavaScript library for component based interfaces,
+developed at Meta and open sourced in 2013. Its central innovation is
+the virtual DOM: rather than directly manipulating the browser DOM on
+every state change, React maintains an in memory UI representation
+and computes the minimal set of changes required to synchronise the
+real DOM with the current state. TypeScript adds a static type system
+to JavaScript, catching type errors at compile time. For a project of
+this size, where data flows from an AI model through a parser, a
+machine learning enrichment layer, and a REST API before reaching the
+frontend, type safety at the boundary protects against category
+mismatches: a Pydantic schema on the backend and a matching
+TypeScript interface on the frontend form a contract the compiler can
+check. Vite provides near instant hot module replacement and produces
+optimised production bundles. State is managed using
+React hooks and an \texttt{AuthContext} provider that exposes the JWT
+and user session. The Monaco Editor \cite{monaco2025}, the same engine
+that powers Visual Studio Code, is embedded in the coding sandbox to
+provide syntax highlighting, auto indentation, and language aware
+features for all five supported languages.
+
+\section{Authentication: JSON Web Tokens and bcrypt}
+
+User authentication uses JSON Web Tokens as standardised in RFC 7519
+\cite{jwt2015}. A JWT is a compact URL safe representation of claims
+encoded as JSON and signed with HMAC SHA256. On login, the backend
+issues a signed token carrying the user id and an expiry timestamp;
+the client stores it and includes it in the Authorization header on
+subsequent requests, where the backend verifies the signature without
+a database lookup. This stateless pattern scales well because no
+server side session state is held. The PyJWT library handles
+encoding and decoding on the backend. Passwords are hashed with
+bcrypt \cite{provos1999bcrypt}, an adaptive hashing function based on
+Blowfish whose configurable cost parameter keeps it secure as
+attacker hardware improves, unlike a bare cryptographic hash such as
+SHA 256 which is fast by design and therefore easy to brute force.
+OWASP authentication guidance \cite{owasp2021} recommends adaptive
+hashing functions such as bcrypt, scrypt, or argon2.
+
+\section{Code Execution Engine}
+
+The code execution engine supports Python, JavaScript, TypeScript,
+Java, and C\#. For each submission, the backend writes the user's
+code to a temporary file and invokes the runtime via
+\texttt{subprocess.run} with a five second timeout. The backend Docker
+image installs Node.js 22 to support JavaScript and TypeScript, and
+both Java and C\# runtimes are also provided. For test case
+evaluation, the engine compares actual standard output against the
+expected output per case. Subprocess isolation is a common pattern in
+online judges; it does not match kernel level isolation systems such
+as Isolate, but is appropriate for the scope and threat model of this
+project, where users are authenticated and have incentive to learn
+rather than to subvert the platform. Production deployment with
+untrusted users would need stronger isolation, flagged as future work.
+
+\section{Data Interchange and Continuous Integration}
+
+All frontend and backend communication uses JSON (RFC 7159
+\cite{json2014}), consistent with the REST architectural style
+\cite{fielding2000rest}. FastAPI automatically generates an OpenAPI
+3.0 specification \cite{openapi2025} from the Pydantic model
+definitions, documenting every endpoint's request and response
+schemas. The continuous integration pipeline uses GitHub Actions
+\cite{githubactions2025} with workflows defined in
+\texttt{.github/workflows/}, running three parallel jobs covering the
+frontend (ESLint, TypeScript type checking, Vite build), the backend
+(Black, Flake8, Python syntax validation), and the machine learning
+models directory.
+
+\section{Scientific Computing Libraries}
+
+Beyond scikit learn \cite{pedregosa2011,buitinck2013api}, the machine
+learning components use NumPy \cite{numpy2020} for array operations,
+pandas \cite{mckinney2010pandas} for tabular data manipulation, and
+joblib \cite{joblib2025} for serialising trained pipelines to
+\texttt{.pkl} files. The \texttt{ColumnTransformer} and
+\texttt{FeatureUnion} classes build modular preprocessing pipelines
+that apply different transformations to different feature subsets and
+concatenate the resulting matrices before model fitting. This pipeline
+based approach ensures preprocessing is consistently applied at
+inference time using the parameters fitted on training data,
+eliminating training and serving skew. Hastie, Tibshirani, and
+Friedman \cite{hastie2009esl} provide the statistical learning
+foundation for the estimators used, and Goodfellow, Bengio, and
+Courville \cite{goodfellow2016deep} offer a reference should future
+iterations replace TF IDF with a learned representation.

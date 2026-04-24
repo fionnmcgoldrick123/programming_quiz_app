@@ -1,0 +1,173 @@
+\chapter{Introduction}
+
+\section{Context and Motivation}
+
+The landscape of technical education has undergone considerable transformation
+in recent years, driven in large part by the proliferation of artificial
+intelligence tools capable of generating content on demand. Within computing
+and software engineering education, the ability to assess understanding and
+reinforce learning through practice problems, quizzes, and coding challenges
+has always been central to how students develop competency. However, the
+process of creating these materials has traditionally been a time consuming
+and manual endeavour, placing a significant burden on educators and leaving
+students who wish to practise independently with a limited and often static
+pool of exercises.
+
+This project addresses that gap directly. It presents a full stack web
+application, informally referred to during development as Code Quiz, that harnesses the generative capabilities of large language
+models \cite{brown2020gpt3} to produce both multiple choice questions and
+coding challenges on demand, based on a topic or prompt provided by the user.
+Rather than returning a raw block of AI generated text, the platform enriches
+every question it produces with two additional layers of machine learning
+intelligence: a predicted set of algorithmic topic tags, and a predicted
+difficulty level. These enrichments are produced by two custom trained
+classifiers that operate on the text of each generated question, running
+silently in the background without adding meaningful latency to the user
+experience.
+
+The motivation for building such a system sits at the intersection of three
+well established problems. First, static question banks grow stale and do
+not adapt to the breadth or specificity of what a learner wishes to study.
+A student who wants to practise tree traversal problems on a Tuesday evening
+should not be limited to the same twenty or thirty problems that a textbook
+happens to cover, and an instructor who wishes to set coursework on a newly
+introduced topic should not have to author every problem by hand. Second,
+even when generic AI tools such as ChatGPT are used to generate questions,
+the output is typically unstructured and requires manual curation before it
+can be deployed as a teaching resource. The questions come back as free text
+without structured options, without test cases, without tags, and without any
+indication of how challenging they are likely to be. Third, learners
+attempting self directed study with coding problems often have no objective
+signal about how difficult a problem is or what underlying concept it is
+testing, making it difficult to build a structured learning path from
+simpler problems to harder ones.
+
+By combining generative AI with trained machine learning models, this
+platform attempts to address all three problems at once: questions are
+produced dynamically to any specification, they are automatically tagged
+with the algorithmic topics they assess, and they are labelled with a
+predicted difficulty so that learners can make informed choices about which
+problems to attempt. Crucially, the topic tagger and the difficulty predictor
+are not wrappers around a second call to a language model. They are
+lightweight scikit learn pipelines \cite{pedregosa2011} trained on real data:
+a LeetCode problem corpus for the tag classifier \cite{leetcode2025} and the
+IBM Project CodeNet dataset for the difficulty classifier \cite{puri2021codenet}.
+This decision was deliberate. Running a second LLM call per question would
+be slow, expensive, and would provide no reproducibility from one run to the
+next, whereas a serialised classifier loaded once at startup produces
+deterministic annotations in a few milliseconds per question.
+
+\section{Project Scope and Level}
+
+This is a level 8 project developed as a final year applied project in
+computing. It encompasses a range of technically demanding areas, including
+full stack web development, integration with external AI APIs, local model
+inference, custom machine learning model training and deployment,
+containerised infrastructure, and a social feature set that includes a
+user accounts system with experience points and a friends network.
+
+The scope is deliberately broad. The intent is not to build a research
+prototype that solves a single narrowly defined problem, but rather to
+deliver a functional, end to end product that a real user could interact with.
+The application is fully containerised using Docker     \cite{merkel2014docker},
+meaning it can be deployed in a reproducible way with a single command. The
+frontend is a single page React application \cite{react2013} served through
+Nginx \cite{nginx2025}. The backend is a Python FastAPI server
+\cite{fastapi2025} that coordinates AI generation, machine learning inference,
+and code execution. A PostgreSQL database \cite{postgres2025} persists user
+data. The two trained classifiers are serialised as model artifacts and
+loaded at server startup so that inference imposes no disk read cost on
+request handling.
+
+The project does not attempt to be a drop in replacement for professional
+learning management systems, nor does it compete with platforms such as
+LeetCode at scale. Its contribution is in demonstrating that a tightly
+integrated pipeline connecting generative AI with custom trained classifiers
+can enrich automatically produced educational content in a meaningful and
+technically sound way, and that this can be achieved within the constraints
+of a solo final year project using open source tooling throughout.
+
+\section{Objectives}
+
+The following objectives guided the development of this project and will
+each be addressed explicitly in the system evaluation chapter:
+
+\begin{enumerate}
+    \item Design and implement a full stack web application that allows
+    users to generate multiple choice and coding challenge quizzes through
+    a natural language prompt, with support for multiple AI backends,
+    including a cloud hosted model (OpenAI) and a locally hosted model
+    (Ollama running Llama 3.1).
+    \item Train a multi label topic tag classifier capable of predicting
+    relevant algorithmic topic tags for a given coding question, using a
+    real world dataset of labelled programming problems.
+    \item Train a difficulty classifier capable of predicting whether a
+    coding problem is easy, medium, or hard, in the absence of explicit
+    human difficulty labels, by engineering a meaningful proxy label from
+    available submission data.
+    \item Integrate both trained classifiers into the backend inference
+    pipeline so that every generated question is automatically enriched
+    with predicted tags and a predicted difficulty level before being
+    returned to the user.
+    \item Implement a code execution engine within the backend capable of
+    running user submitted code against test cases across multiple
+    programming languages, and returning pass or fail results per test.
+    \item Deliver a user accounts system with authentication, profile
+    management, an experience point and levelling mechanic, and a social
+    friends network.
+\end{enumerate}
+
+The primary metric for evaluating the machine learning components is
+classification performance on held out test sets, using precision, recall,
+and the F1 score. For the topic classifier specifically, F1 micro and F1
+macro will both be reported, as they each reveal different aspects of
+performance when class imbalance is present: F1 micro is dominated by the
+most populous classes, whereas F1 macro treats every class equally regardless
+of support. For the difficulty classifier, F1 macro is the primary metric
+given the three class setup with roughly balanced support. For the
+application itself, the evaluation focuses on whether the pipeline functions
+correctly, whether generated questions receive sensible tags and difficulty
+labels, and whether the code execution engine correctly judges test case
+outcomes across every supported language.
+
+\section{Chapter Overview}
+
+The remainder of this dissertation is structured as follows. Chapter
+2 describes the development approach, the planning and requirements
+work done upfront, the GitHub based workflow, the continuous
+integration pipeline, and the validation strategies for both software
+and machine learning components. Chapter 3 surveys the technologies,
+libraries, frameworks, and models that underpin the system, covering
+large language models, the machine learning techniques used in both
+classifiers, the web technologies used for the frontend and backend,
+containerisation, and the training datasets. Chapter 4 presents the
+architecture of the application, including component diagrams, data
+flow descriptions, the database schema, the full training pipelines,
+and the design of the inference bridge between the backend and the
+trained model artefacts. Chapter 5 assesses the project against the
+objectives, presenting classification metrics, confusion matrices, per
+class breakdowns, and an honest examination of limitations. Chapter 6
+concludes with a summary of outcomes, unexpected insights that
+emerged, and concrete opportunities for future investigation.
+
+\section{Project Repository}
+
+The full source code, including the frontend, backend, training
+scripts, Docker configuration, and serialised model artefacts, is
+available at the following repository:
+
+\begin{center}
+\url{https://github.com/fionnmcgoldrick123/programming-quiz-app}
+\end{center}
+
+A brief screencast demonstrating the application is also available via
+the repository README.
+
+The repository contains a \texttt{frontend} directory (React and
+TypeScript source), a \texttt{backend} directory (FastAPI application
+with route handlers, services, auth, and the code execution engine),
+an \texttt{ml\_models} directory (training scripts and serialised
+\texttt{.pkl} artefacts for both classifiers), a
+\texttt{docker-compose.yml} at the root that brings all three services
+up in a single step, and a \texttt{docs} directory containing the
+LaTeX source for this dissertation.

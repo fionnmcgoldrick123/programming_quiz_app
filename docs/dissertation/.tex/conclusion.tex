@@ -1,0 +1,205 @@
+\chapter{Conclusion}
+
+\section{Summary of Context and Objectives}
+
+This project set out to address a genuine gap in the landscape of
+technical education tools: the absence of a platform capable of
+generating structured, enriched programming quizzes and coding
+challenges on demand, tailored to any topic a learner wishes to
+practise. Existing solutions either offer static question banks that
+grow stale, or expose raw AI generated content without any
+organisational structure or quality signal. The platform developed in
+this dissertation bridges that gap by combining the generative power
+of large language models \cite{brown2020gpt3,touvron2023llama} with
+two custom trained machine learning classifiers that automatically
+enrich every generated question with a predicted topic tag and a
+predicted difficulty level.
+
+Six objectives were defined at the outset of the project. These
+covered the full stack web application and its AI generation pipeline,
+the two classifiers and their integration into the backend inference
+layer, the multi language code execution engine, and the user account
+system with its gamification and social features. All six objectives
+were pursued simultaneously across an iterative development process
+grounded in agile principles \cite{agilemanifesto2001,beck2004xp},
+with a GitHub based workflow, continuous integration pipeline
+\cite{githubactions2025}, and containerised Docker Compose
+infrastructure \cite{merkel2014docker,dockercompose2025} supporting
+the full development lifecycle. Each objective maps to a concrete
+subsystem in the delivered software, and each has been evaluated
+against measurable criteria in Chapter 5.
+
+\section{Summary of Findings}
+
+The system evaluation chapter assessed each objective against
+measurable criteria. The key findings are summarised below.
+
+The AI generation pipeline functioned reliably across both supported
+backends. The OpenAI \texttt{gpt-4o-mini} backend consistently
+produced clean, schema conforming JSON for both MCQ and coding
+challenge quiz types. The Ollama \texttt{llama3.1:8b} backend
+required additional post processing to handle formatting
+inconsistencies in its output but performed correctly once these were
+addressed. JSON parsing fragility when requesting larger numbers of
+questions was identified as the primary limitation of this component,
+and the structured output mode now offered by the OpenAI API
+\cite{openai2024structured} offers a clear path to resolving it.
+
+The topic tag classifier achieved a test set accuracy of 0.805 and an
+F1 macro of 0.622 across ten algorithmic topic classes. Performance
+was strong on classes with distinctive vocabulary, with Database
+achieving a perfect F1 of 1.00 and Array achieving 0.91. Performance
+was weaker on conceptually overlapping classes such as Hash Table
+(0.20) and Dynamic Programming (0.35), where genuine ambiguity in the
+label definitions limits the ceiling of any text based classifier
+\cite{zhang2014multilabel}. The shrinkage regularised per label
+threshold optimisation, informed by the approach of Lipton et al.
+\cite{lipton2014thresholding}, produced noticeable gains over the
+default 0.5 threshold on the minority classes.
+
+The difficulty classifier achieved a test set accuracy of approximately
+0.593 on a balanced three class problem. The XGBoost model
+\cite{chen2016xgboost} outperformed all six alternatives on validation
+accuracy. The medium difficulty class was the hardest to classify
+across all models, which is consistent with its position as the
+boundary class between easy and hard. The fundamental limitation of
+this component is the proxy label: acceptance rate is a reasonable
+but imperfect stand in for human assigned difficulty
+\cite{zhou2017weaksupervision}.
+
+Both classifiers were successfully integrated into the backend
+inference pipeline as in process singletons, adding negligible latency
+to the question generation flow. Every generated question is
+automatically enriched with topic tags and a difficulty label before
+being returned to the frontend, delivering on the fourth objective
+directly.
+
+The code execution engine supported all five target languages (Python,
+JavaScript, TypeScript, Java, and C\#) with a five second timeout and
+per test case pass or fail evaluation. Execution was reliable across
+all languages, with Java and C\# requiring careful handling of runtime
+entry point conventions.
+
+The user accounts system, including JWT authentication \cite{jwt2015},
+bcrypt password hashing \cite{provos1999bcrypt}, the experience and
+levelling mechanic, and the full social friends lifecycle, functioned
+correctly in all manual testing scenarios.
+
+\section{Unexpected Insights}
+
+Several insights emerged during the project that were not anticipated
+at the outset.
+
+The most significant was the discovery of how strongly class imbalance
+dominates multi class text classification performance. It was initially
+assumed that accuracy would be the primary indicator of classifier
+quality, and it was only through the process of computing F1 macro
+alongside accuracy that the disparity became apparent: a model scoring
+0.805 accuracy was simultaneously scoring only 0.622 on F1 macro,
+because it was essentially ignoring minority classes. This led to the
+adoption of per label threshold tuning and the use of F1 macro as the
+primary model selection criterion, which meaningfully changed which
+model was chosen for deployment. The lesson that accuracy can conceal
+minority class failure is well documented in the literature
+\cite{japkowicz2002imbalance}, but encountering it in a concrete
+project rather than in the abstract made the point land far more
+forcefully.
+
+A second unexpected insight came from the difficulty classifier's
+label engineering. The decision to use acceptance rate as a proxy for
+difficulty initially felt like a pragmatic workaround, but the process
+of investigating why the medium class was consistently the hardest to
+classify revealed something genuinely interesting about the nature of
+difficulty itself: the boundaries between easy, medium, and hard are
+not crisp in any dataset, human or otherwise. Problems cluster
+continuously along a difficulty spectrum, and any binning strategy
+introduces arbitrary boundaries. This is not unique to this project
+and reflects a broader challenge in any ordinal classification problem
+derived from continuous data.
+
+A third observation, more practical in nature, was the extent to which
+prompt engineering turned out to be as important as model selection for
+the quality of the AI generation pipeline. Minor changes to the
+structure and specificity of the prompt templates had a larger effect
+on output consistency than switching between model backends. This
+echoes findings from the broader prompt engineering literature
+\cite{liu2023promptsurvey,wei2022chainofthought}, and it has concrete
+implications for how the project's templates should be versioned and
+tested going forward. The prompts are basically part of the product itself, so they should be handled like code, properly reviewed, version controlled, and tested to make sure they still give the expected results.
+
+\section{Opportunities for Future Investigation}
+
+Several directions for extending and improving the platform were
+identified during the course of the project.
+
+The most impactful improvement to the topic tag classifier would be
+to expand the training dataset to include more examples of the
+minority classes, or to acquire a dataset with a more balanced
+distribution across tags. Oversampling techniques such as SMOTE
+\cite{chawla2002smote} applied to the TF IDF feature space, or the
+use of class weighted loss functions more aggressive than the current
+\texttt{balanced} setting, could also be explored. The adoption of a
+pre trained language model such as a fine tuned BERT variant
+\cite{devlin2019bert} for feature extraction, rather than a bag of
+words TF IDF approach, would likely yield stronger performance on
+the conceptually overlapping classes where surface vocabulary is
+insufficient to discriminate between labels.
+
+For the difficulty classifier, the most meaningful improvement would
+be the introduction of human verified difficulty labels, even for a
+small subset of problems, to serve as ground truth for evaluating and
+calibrating the proxy label approach. The current model could also be
+extended to incorporate solution level features such as the complexity
+of accepted solutions or the distribution of approaches used, which
+would provide a richer signal than problem description text alone.
+Replacing the three way classification with a regression onto a
+continuous difficulty score, and binning only at presentation time,
+would also remove the arbitrary boundary artefact described above.
+
+The JSON parsing fragility of the AI generation pipeline would benefit
+from the adoption of structured output modes now available in the
+OpenAI API \cite{openai2024structured}, which constrain the model's
+output to a specified JSON schema at the API level rather than relying
+on prompt instructions alone. This would eliminate the most common
+class of parsing errors encountered during testing. Similar features
+are emerging across other LLM providers and would allow the dual
+backend architecture to be retained while reducing parser complexity
+on both sides.
+
+From an infrastructure perspective, deploying the application to a
+cloud provider using the existing Docker Compose configuration as a
+starting point, and adding HTTPS termination, a managed database, and
+horizontal scaling for the backend, would make the platform suitable
+for real user traffic. The continuous integration pipeline built
+during the project provides a strong foundation for automating this
+deployment process. The code execution engine would also need to be
+replaced with a properly sandboxed runner such as a dedicated judging
+system or an isolated container per submission before the platform
+could responsibly accept code from untrusted users.
+
+A further direction, tangential but interesting, would be to feed the
+enriched annotations back into the generation prompt. Once the system
+knows that it has just produced an Array problem of medium difficulty,
+the next request could be steered explicitly towards a different
+topic or a harder level, producing a more balanced practice session
+without requiring the user to manage that breadth manually. This
+closes the loop between the generative and discriminative components
+of the system in a way that the current architecture hints at but
+does not yet exploit.
+
+\section{Closing Remarks}
+
+This project demonstrates that it is entirely feasible to build a full
+stack educational platform in which AI generated content is
+automatically enriched by custom trained machine learning models, all
+within the scope of a final year applied project. The combination of
+large language model generation with lightweight, fast scikit learn
+classifiers \cite{pedregosa2011} proves to be a practical and
+effective architecture: the LLM handles the creative and domain
+general task of producing coherent questions, while the classifiers
+handle the structured annotation task of labelling them.
+
+The limitations identified throughout this dissertation, the proxy
+label ceiling, the class imbalance in the topic tagger, the JSON
+parsing edge cases, are not failures of ambition but markers of where
+the next iteration of this work begins. This project delivers a fully realised platform that integrates generation, tagging, grading, and execution of programming challenges with a social and gamified learning experience.

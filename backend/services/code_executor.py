@@ -13,6 +13,71 @@ import re
 from pydantic_models import RunCodeRequest, SubmitCodeRequest
 
 
+def _sanitise_test_case_str(s: str) -> str:
+    """
+    Convert a test-case string that may contain Python-specific syntax into
+    valid JSON.
+
+    Transformations applied (only outside quoted string literals):
+      1. Python tuples  (a, b, c)  →  JSON arrays  [a, b, c]
+      2. Trailing commas before ] or }  (invalid in JSON)
+      3. Python True/False/None  →  true/false/null
+
+    Normal JSON that is already valid passes through unchanged.
+    """
+    result: list[str] = []
+    i = 0
+    n = len(s)
+
+    while i < n:
+        ch = s[i]
+
+        # --- inside a quoted string: copy verbatim (handle escapes) ----------
+        if ch == '"':
+            result.append(ch)
+            i += 1
+            while i < n:
+                c2 = s[i]
+                result.append(c2)
+                if c2 == '\\':          # escape sequence — skip next char
+                    i += 1
+                    if i < n:
+                        result.append(s[i])
+                elif c2 == '"':         # end of string
+                    break
+                i += 1
+            i += 1
+            continue
+
+        # --- Python tuple opening paren → JSON array bracket -----------------
+        if ch == '(':
+            result.append('[')
+            i += 1
+            continue
+
+        # --- Python tuple closing paren → JSON array bracket -----------------
+        if ch == ')':
+            result.append(']')
+            i += 1
+            continue
+
+        result.append(ch)
+        i += 1
+
+    joined = ''.join(result)
+
+    # Remove trailing commas before ] or } (Python sometimes emits them)
+    joined = re.sub(r',\s*([\]}])', r'\1', joined)
+
+    # Python boolean / None literals → JSON equivalents
+    # Use word-boundary replacement so we don't clobber strings containing them
+    joined = re.sub(r'\bTrue\b',  'true',  joined)
+    joined = re.sub(r'\bFalse\b', 'false', joined)
+    joined = re.sub(r'\bNone\b',  'null',  joined)
+
+    return joined
+
+
 async def run_code(request: RunCodeRequest):
     """
     Execute code and return the output or error.
@@ -47,8 +112,15 @@ async def submit_code(request: SubmitCodeRequest):
 
         for i, test_case_str in enumerate(request.test_cases):
             try:
+                # Sanitise Python-specific syntax that is not valid JSON.
+                # The LLM sometimes emits tuples as (1, 2, 3) instead of [1, 2, 3].
+                # Replace every bare ( … ) sequence that appears outside of a
+                # JSON string literal with [ … ], then strip any trailing commas
+                # before ] or } so we don't produce malformed JSON.
+                sanitised = _sanitise_test_case_str(test_case_str)
+
                 # Parse the JSON test case
-                test_case = json_module.loads(test_case_str)
+                test_case = json_module.loads(sanitised)
                 input_data = test_case.get("input", {})
                 expected = test_case.get("expected")
 
