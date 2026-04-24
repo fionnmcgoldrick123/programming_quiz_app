@@ -1,6 +1,6 @@
 from pydantic_models import QuizSchema, CodingQuestionSchema
 from ml.quiz_metadata import compute_coding_metadata
-from ml.difficulty_service import predict_difficulty_for_question
+from ml.difficulty_service import predict_difficulty_for_question, predict_difficulty_for_mcq
 from ml.tag_service import predict_tags_for_question
 import json
 import logging
@@ -46,8 +46,8 @@ def openai_parser(response: dict) -> list[QuizSchema]:
     questions = []
 
     for q in data["questions"]:
-        topic_tags = predict_tags_for_question(quiz_title, q["question"])
-        logger.debug(f"[TAG_SERVICE] MCQ predicted tags: {topic_tags}")
+        difficulty = predict_difficulty_for_mcq(q["question"])
+        logger.debug(f"[DIFFICULTY_SERVICE] MCQ predicted difficulty: {difficulty}")
 
         questions.append(
             QuizSchema(
@@ -55,7 +55,7 @@ def openai_parser(response: dict) -> list[QuizSchema]:
                 question=q["question"],
                 options=q["options"],
                 correct_answer=q["answer"],
-                topic_tags=topic_tags,
+                difficulty=difficulty,
             )
         )
     return questions

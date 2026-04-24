@@ -8,9 +8,25 @@ function Navbar(){
     const location = useLocation()
     const { user, isAuthenticated } = useAuth()
 
-    const isInActiveQuiz =
-        location.pathname === '/quiz' ||
-        location.pathname === '/code-sandbox';
+    const isInActiveQuiz = (() => {
+        if (location.pathname !== '/quiz' && location.pathname !== '/code-sandbox') return false;
+        if (!user?.id) return true; // can't read session, assume active
+        try {
+            if (location.pathname === '/quiz') {
+                const raw = sessionStorage.getItem(`quizPageSession_${user.id}`);
+                if (!raw) return false;
+                const s = JSON.parse(raw);
+                return Boolean(s?.quiz?.length && !s.finished);
+            }
+            if (location.pathname === '/code-sandbox') {
+                const raw = sessionStorage.getItem(`codeSandboxSession_${user.id}`);
+                if (!raw) return false;
+                const s = JSON.parse(raw);
+                return Boolean(s?.questions?.length && !s.finished);
+            }
+        } catch { /* ignore */ }
+        return true;
+    })();
 
     function handleClick(path : string){
         navigate(path);

@@ -1,6 +1,6 @@
 from pydantic_models import QuizSchema, CodingQuestionSchema
 from ml.quiz_metadata import compute_coding_metadata
-from ml.difficulty_service import predict_difficulty_for_question
+from ml.difficulty_service import predict_difficulty_for_question, predict_difficulty_for_mcq
 from ml.tag_service import predict_tags_for_question
 import json
 import re
@@ -47,8 +47,8 @@ def ollama_parser(response: dict) -> list[QuizSchema]:
             opt.split(": ", 1)[1] if ": " in opt else opt for opt in raw_opts
         ]
 
-        topic_tags = predict_tags_for_question(quiz_title, q["question"])
-        print(f"[TAG_SERVICE] MCQ predicted tags: {topic_tags}")
+        difficulty = predict_difficulty_for_mcq(q["question"])
+        print(f"[DIFFICULTY_SERVICE] MCQ predicted difficulty: {difficulty}")
 
         questions.append(
             QuizSchema(
@@ -56,7 +56,7 @@ def ollama_parser(response: dict) -> list[QuizSchema]:
                 question=q["question"],
                 options=clean_options,
                 correct_answer=q["answer"],
-                topic_tags=topic_tags,
+                difficulty=difficulty,
             )
         )
 

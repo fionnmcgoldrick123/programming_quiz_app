@@ -224,9 +224,15 @@ function CodeSandboxPage() {
         }).catch(err => console.error('Error saving quiz result:', err));
     }, [finished, token, questions, language, quizPrompt]);
 
-    // Persist session to sessionStorage whenever progress changes
+    // Persist session to sessionStorage whenever progress changes.
+    // When the quiz is finished, remove the session so a future new quiz is never
+    // blocked by a stale finished-state entry.
     useEffect(() => {
-        if (questions.length && CODE_SESSION_KEY) {
+        if (!CODE_SESSION_KEY) return;
+        if (!questions.length) return;
+        if (finished) {
+            sessionStorage.removeItem(CODE_SESSION_KEY);
+        } else {
             sessionStorage.setItem(CODE_SESSION_KEY, JSON.stringify({
                 sessionId,
                 questions,
@@ -272,6 +278,12 @@ function CodeSandboxPage() {
     }
 
     function confirmQuit() {
+        if (CODE_SESSION_KEY) sessionStorage.removeItem(CODE_SESSION_KEY);
+        navigate('/prompt');
+    }
+
+    // Used on the results screen — no confirmation needed since the quiz is already done
+    function handleStartNewChallenge() {
         if (CODE_SESSION_KEY) sessionStorage.removeItem(CODE_SESSION_KEY);
         navigate('/prompt');
     }
@@ -679,7 +691,7 @@ function CodeSandboxPage() {
                     </div>
 
                     <div className="sandbox-results-actions">
-                        <button className="sandbox-back-button" onClick={handleQuitQuiz}>
+                        <button className="sandbox-back-button" onClick={handleStartNewChallenge}>
                             Start New Challenge
                         </button>
                     </div>

@@ -278,3 +278,31 @@ def predict_difficulty_for_question(q) -> str:
         print("  → Falling back to 'medium'")
         print("="*80 + "\n")
         return "medium"
+
+
+def predict_difficulty_for_mcq(question_text: str) -> str:
+    """
+    Predict difficulty ("easy" / "medium" / "hard") for an MCQ question.
+
+    Uses only text-derived features (the code/runtime fields are set to zero
+    since MCQ questions have no starter code or execution metadata).
+
+    Falls back to "medium" gracefully if the model is unavailable or errors.
+
+    Parameters
+    ----------
+    question_text : str
+        The question body / problem statement.
+    """
+
+    class _MCQProxy:
+        """Duck-typed stand-in for CodingQuestionSchema with zero code metadata."""
+        def __init__(self, text: str):
+            self.question        = text
+            self.avg_cpu_time_ms = 0
+            self.avg_memory_kb   = 0
+            self.avg_code_lines  = 0
+            self.time_limit_ms   = 1000
+            self.memory_limit_kb = 65536
+
+    return predict_difficulty_for_question(_MCQProxy(question_text))

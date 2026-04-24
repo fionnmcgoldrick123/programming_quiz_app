@@ -175,6 +175,38 @@
     word-break: break-word;
 }
 
+/* ── difficulty badge ── */
+.quiz-difficulty-badge {
+    display: inline-block;
+    font-family: 'Fira Code', monospace;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    border: 1.5px solid;
+    margin-bottom: 1rem;
+}
+
+.quiz-difficulty-easy {
+    background: rgba(46, 204, 113, 0.1);
+    border-color: #2ecc71;
+    color: #2ecc71;
+}
+
+.quiz-difficulty-medium {
+    background: rgba(243, 156, 18, 0.1);
+    border-color: #f39c12;
+    color: #f39c12;
+}
+
+.quiz-difficulty-hard {
+    background: rgba(231, 76, 60, 0.1);
+    border-color: #e74c3c;
+    color: #e74c3c;
+}
+
 /* ── hint styles removed ── */
 
 /* ── options 2×2 grid ── */

@@ -4,13 +4,18 @@ import Navbar from "../layout/Navbar";
 import { useAuth } from "../../utils/AuthContext";
 import '../../css-files/pages/QuizPage.css'
 
-const XP_PER_CORRECT = 10;
+const XP_PER_MCQ_DIFFICULTY: Record<string, number> = {
+    easy: 15,
+    medium: 25,
+    hard: 40,
+};
 
 interface QuizQuestion {
     title: string;
     question: string;
     options: string[];
     correct_answer: string;
+    difficulty?: string;
     topic_tags?: string[];
 }
 
@@ -126,7 +131,7 @@ function QuizPage() {
         }).catch(err => console.error('Error saving quiz result:', err));
     }, [finished, token, quiz, quizPrompt]);
 
-    async function addXpToUser() {
+    async function addXpToUser(xp: number) {
         if (!token) return;
         try {
             const response = await fetch('http://127.0.0.1:8000/add-xp', {
@@ -135,7 +140,7 @@ function QuizPage() {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify({ xp_amount: XP_PER_CORRECT })
+                body: JSON.stringify({ xp_amount: xp })
             });
 
             if (response.ok) {
@@ -202,9 +207,11 @@ function QuizPage() {
 
         if (isCorrect) {
             correctCountRef.current += 1;
+            const difficulty = currentQ.difficulty ?? "easy";
+            const xpEarned = XP_PER_MCQ_DIFFICULTY[difficulty] ?? XP_PER_MCQ_DIFFICULTY.easy;
             setShowXpAnimation(true);
-            setTotalXpEarned(prev => prev + XP_PER_CORRECT);
-            addXpToUser();
+            setTotalXpEarned(prev => prev + xpEarned);
+            addXpToUser(xpEarned);
             setFeedbackMessage("Correct!");
         } else {
             setFeedbackMessage(`Incorrect! The correct answer was ${currentQ.correct_answer}.`);
@@ -373,6 +380,14 @@ function QuizPage() {
                 <div className="quiz-body">
                     <div className="quiz-card">
                         <h2 className="quiz-card__title">{currentQ.title}</h2>
+
+                        {/* Difficulty badge */}
+                        {currentQ.difficulty && (
+                            <div className={`quiz-difficulty-badge quiz-difficulty-${currentQ.difficulty}`}>
+                                {currentQ.difficulty}
+                            </div>
+                        )}
+
                         <h3 className="quiz-card__question">{currentQ.question}</h3>
 
                         {/* Topic Tags */}
@@ -403,7 +418,7 @@ function QuizPage() {
                                         fontWeight: 700,
                                         animation: 'xpFloat 0.8s ease-out forwards',
                                     }}>
-                                        +{XP_PER_CORRECT} XP
+                                        +{XP_PER_MCQ_DIFFICULTY[currentQ?.difficulty ?? 'easy'] ?? XP_PER_MCQ_DIFFICULTY.easy} XP
                                     </span>
                                 )}
                             </div>

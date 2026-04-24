@@ -13,7 +13,8 @@ class QuizSchema(BaseModel):
     question: str
     options: List[str]
     correct_answer: str
-    topic_tags: List[str] = []  # AI-predicted topic tags
+    difficulty: str = ""  # "easy" | "medium" | "hard" — predicted by ML model
+    topic_tags: List[str] = []  # AI-predicted topic tags (coding only)
 
 
 class PromptRequest(BaseModel):
