@@ -1,25 +1,37 @@
 ﻿# AI-Powered Adaptive Programming Quiz Platform
 
-**Final Year Project: Development of an AI-Powered Web Platform for Adaptive Programming Quizzes and Practical Learning**
+![Python](https://img.shields.io/badge/Python-3.11-3776AB?logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)
+
+> **Final Year Project** — Development of an AI-Powered Web Platform for Adaptive Programming Quizzes and Practical Learning
 
 A full-stack web application that generates personalised, AI-driven programming quizzes and coding challenges in real time. Users specify a topic, programming language, and number of questions. The platform uses a large language model to produce either multiple-choice questions or practical coding challenges, assigns a difficulty rating predicted by a trained machine learning model, and provides a live in-browser code editor where users can write, run, and submit solutions against automated test cases.
 
 Adaptive difficulty is a core design goal. Rather than hardcoding difficulty, the system infers it through an ML pipeline trained on IBM Project CodeNet, a dataset of over four million competitive programming submissions across more than 4000 problems. A second ML model performs multi-label topic classification, trained on a LeetCode dataset, tagging each generated question with its primary algorithmic categories before it is returned to the user.
 
 ## Screencast Demo
-**Youtube Link:** https://www.youtube.com/watch?v=aBWo7vzyTZA
+
+[![Watch on YouTube](https://img.shields.io/badge/Watch%20Demo-YouTube-FF0000?logo=youtube&logoColor=white)](https://www.youtube.com/watch?v=aBWo7vzyTZA)
 
 ## Table of Contents
 
 1. [Technology Stack](#technology-stack)
 2. [Core Features](#core-features)
-3. [Project Structure](#project-structure)
-4. [Environment Variables](#environment-variables)
-5. [Setup and Running](#setup-and-running)
-6. [Docker Deployment](#docker-deployment)
-7. [Testing](#testing)
-8. [API Reference](#api-reference)
-9. [Machine Learning Models](#machine-learning-models)
+3. [Quick Start](#quick-start)
+4. [Project Structure](#project-structure)
+5. [Environment Variables](#environment-variables)
+6. [Setup and Running](#setup-and-running)
+7. [Docker Deployment](#docker-deployment)
+8. [Testing](#testing)
+9. [API Reference](#api-reference)
+10. [Machine Learning Models](#machine-learning-models)
+11. [Security Notes](#security-notes)
+12. [AI Usage Declaration](#ai-usage-declaration)
+13. [Author](#author)
 
 ## Technology Stack
 
@@ -36,6 +48,8 @@ Adaptive difficulty is a core design goal. Rather than hardcoding difficulty, th
 | In-Browser Editor | Monaco Editor |
 | Containerisation | Docker, Docker Compose |
 | Data Visualisation | Recharts |
+
+---
 
 ## Core Features
 
@@ -74,6 +88,42 @@ The platform supports switching between OpenAI GPT-4o-mini and a locally hosted 
 ### Code Sandbox
 
 A standalone code sandbox page provides a free-form editor where users can write and execute code in any supported language outside of the quiz context.
+
+---
+
+## Quick Start
+
+The fastest way to get the platform running is via Docker Compose. Ensure Docker Desktop is installed, then:
+
+1. Clone the repository and navigate to the project root.
+2. Copy the environment variable example and fill in your values:
+
+```bash
+cp .env.example .env
+```
+
+3. Ensure the trained ML model files are present (see [Machine Learning Models](#machine-learning-models)):
+
+```
+ml_models/difficulty_classifier/difficulty_model.pkl
+ml_models/tag_classifier/topic_model.pkl
+```
+
+4. Start all services:
+
+```bash
+docker compose up --build
+```
+
+| Service | URL |
+|---|---|
+| Frontend | http://localhost:3000 |
+| Backend API | http://localhost:8000 |
+| API Docs (Swagger) | http://localhost:8000/docs |
+
+For local development without Docker, see [Setup and Running](#setup-and-running).
+
+---
 
 ## Project Structure
 
@@ -127,6 +177,8 @@ docs/
     ml_docs/                  Training figures and evaluation outputs
 ```
 
+---
+
 ## Environment Variables
 
 Create a `.env` file in the project root before running the backend or Docker Compose.
@@ -150,23 +202,38 @@ Create a `.env` file in the project root before running the backend or Docker Co
 
 Example `.env`:
 
-```
+```dotenv
 OPENAI_API_KEY=sk-...
 JWT_SECRET=change-me-in-production
 DATABASE_URL=postgresql://fyp:password@localhost:5432/fyp
 APP_BASE_URL=http://localhost:5173
+
+# Docker Compose
 POSTGRES_PASSWORD=password
+
+# SMTP (optional — omit to disable email verification)
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_USERNAME=you@example.com
+SMTP_PASSWORD=your-smtp-password
+SMTP_FROM=no-reply@example.com
 ```
+
+> **Security:** Never commit your `.env` file to version control. Add it to `.gitignore`.
+
+---
 
 ## Setup and Running
 
 ### Prerequisites
 
-- Python 3.11 or later
-- Node.js 22 or later
-- PostgreSQL 16 running locally or via Docker
-- An OpenAI API key (for GPT-4o-mini usage)
-- Ollama installed locally (optional, for local LLM usage)
+| Requirement | Version | Notes |
+|---|---|---|
+| Python | 3.11+ | Backend runtime |
+| Node.js | 22+ | Frontend build tooling |
+| PostgreSQL | 16 | Can be run via Docker |
+| OpenAI API key | — | Required for GPT-4o-mini |
+| Ollama | latest | Optional, for local LLM |
 
 ### Backend
 
@@ -184,7 +251,7 @@ pip install -r requirements.txt
 uvicorn main:app --reload
 ```
 
-The API will be available at `http://127.0.0.1:8000`. Interactive documentation is available at `http://127.0.0.1:8000/docs`.
+The API will be available at `http://127.0.0.1:8000`. Interactive Swagger documentation is available at `http://127.0.0.1:8000/docs`.
 
 ### Frontend
 
@@ -194,9 +261,20 @@ npm install
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:5173`.
+The frontend development server will be available at `http://localhost:5173`.
 
 ### Local LLM via Ollama (Optional)
+
+Install Ollama from [ollama.com](https://ollama.com) and pull the Llama 3.1 8B model:
+
+```bash
+ollama pull llama3.1:8b
+ollama serve
+```
+
+Once running, the active model can be switched from the frontend settings page without restarting the backend.
+
+---
 
 Install Ollama from [ollama.com](https://ollama.com) and pull the Llama 3.1 8B model:
 
@@ -228,6 +306,7 @@ docker compose up --build
 |---|---|
 | Frontend | http://localhost:3000 |
 | Backend API | http://localhost:8000 |
+| API Docs (Swagger) | http://localhost:8000/docs |
 | PostgreSQL | localhost:5432 |
 
 The database service includes a health check. The backend waits for PostgreSQL to be ready before starting. All services restart automatically unless stopped.
@@ -237,6 +316,14 @@ To stop and remove containers:
 ```bash
 docker compose down
 ```
+
+To stop and remove containers **including the database volume** (destructive):
+
+```bash
+docker compose down -v
+```
+
+---
 
 ## Testing
 
@@ -265,62 +352,70 @@ Generate a coverage report:
 pytest --cov=. --cov-report=html
 ```
 
+---
+
 ## API Reference
+
+All authenticated endpoints require an `Authorization: Bearer <token>` header containing the JWT returned by `/login`.
 
 ### AI and Quiz
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/prompt` | Generate a quiz or coding challenge | No |
-| POST | `/model` | Switch the active AI model | Yes |
-| POST | `/hint/mcq` | Generate a contextual hint for an MCQ question | No |
+| `POST` | `/prompt` | Generate a quiz or coding challenge | No |
+| `POST` | `/model` | Switch the active AI model (`openai` or `llama3.1:8b`) | Yes |
+| `POST` | `/hint/mcq` | Generate a contextual hint for an MCQ question | No |
 
 ### Authentication
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/register` | Register a new user account | No |
-| POST | `/login` | Authenticate and receive a JWT token | No |
-| GET | `/verify-email` | Verify email address via token | No |
-| POST | `/resend-verification` | Resend the verification email | No |
+| `POST` | `/register` | Register a new user account | No |
+| `POST` | `/login` | Authenticate and receive a JWT token | No |
+| `GET` | `/verify-email` | Verify email address via token | No |
+| `POST` | `/resend-verification` | Resend the verification email | No |
 
 ### User Profile
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/me` | Get the authenticated user's profile | Yes |
-| PATCH | `/me/profile` | Update display name, bio, or avatar | Yes |
-| POST | `/add-xp` | Award XP to the authenticated user | Yes |
-| GET | `/user-stats` | Get aggregated quiz statistics | Yes |
-| GET | `/quiz-history` | Get the last 20 quiz sessions | Yes |
-| POST | `/save-quiz-result` | Save a completed quiz result | Yes |
+| `GET` | `/me` | Get the authenticated user's profile | Yes |
+| `PATCH` | `/me/profile` | Update display name, bio, or avatar | Yes |
+| `POST` | `/add-xp` | Award XP to the authenticated user | Yes |
+| `GET` | `/user-stats` | Get aggregated quiz statistics | Yes |
+| `GET` | `/quiz-history` | Get the last 20 quiz sessions | Yes |
+| `POST` | `/save-quiz-result` | Save a completed quiz result | Yes |
+| `POST` | `/quiz-session` | Save a full quiz session with per-question detail | Yes |
 
 ### Social
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/users/search` | Search users by name or email | Yes |
-| GET | `/users/{user_id}/profile` | Get a user's public profile | Yes |
-| GET | `/users/{user_id}/stats` | Get a user's statistics (friends only) | Yes |
-| POST | `/friends/request/{addressee_id}` | Send a friend request | Yes |
-| POST | `/friends/respond` | Accept or reject a friend request | Yes |
-| GET | `/friends/requests` | List pending incoming friend requests | Yes |
-| GET | `/friends` | List confirmed friends | Yes |
-| DELETE | `/friends/{friend_id}` | Remove a friend | Yes |
-| GET | `/friends/count` | Get friend count | Yes |
+| `GET` | `/users/search` | Search users by name or email | Yes |
+| `GET` | `/users/{user_id}/profile` | Get a user's public profile | Yes |
+| `GET` | `/users/{user_id}/stats` | Get a user's statistics (friends only) | Yes |
+| `POST` | `/friends/request/{addressee_id}` | Send a friend request | Yes |
+| `POST` | `/friends/respond` | Accept or reject a friend request | Yes |
+| `GET` | `/friends/requests` | List pending incoming friend requests | Yes |
+| `GET` | `/friends/requests/pending-count` | Get count of pending friend requests | Yes |
+| `GET` | `/friends` | List confirmed friends | Yes |
+| `DELETE` | `/friends/{friend_id}` | Remove a friend | Yes |
+| `GET` | `/friends/count` | Get friend count | Yes |
 
 ### Code Execution
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| POST | `/run-code` | Execute code and return stdout/stderr | No |
-| POST | `/submit-code` | Run code against test cases and return results | No |
+| `POST` | `/run-code` | Execute code and return stdout/stderr | No |
+| `POST` | `/submit-code` | Run code against test cases and return results | No |
 
 ### System
 
 | Method | Endpoint | Description | Auth |
 |---|---|---|---|
-| GET | `/health` | Health check | No |
+| `GET` | `/health` | Health check — returns `{"status": "alive"}` | No |
+
+---
 
 ## Machine Learning Models
 
@@ -345,6 +440,15 @@ python ml_models/tag_classifier/train.py
 ```
 
 Both trained model files must be present for the backend to perform difficulty and tag prediction at runtime. If either file is missing, the backend will start but predictions will be skipped for the unavailable model.
+
+---
+
+## Security Notes
+
+- **Code execution** uses `subprocess.run()` with a timeout and captures output from a temporary file. This provides basic isolation suitable for a development or demonstration environment. It does **not** provide OS-level sandboxing. Production deployments requiring untrusted code execution should use a container-based or VM-based sandbox such as nsjail, gVisor, or Firecracker.
+- **JWT tokens** are signed with `HS256` using the `JWT_SECRET` environment variable. Use a cryptographically random value of at least 32 bytes in production.
+- **Passwords** are hashed with bcrypt before storage. Plain-text passwords are never persisted.
+- **CORS** is restricted to `localhost:5173`, `localhost:3000`, and `127.0.0.1:8000` by default. Update `CORS_ORIGINS` in `config.py` for production deployments.
 
 ---
 
@@ -380,4 +484,9 @@ Generative AI tools were used during the development of this project in a supple
 
 ## Author
 
-Fionn McGoldrick | G00422349
+**Fionn McGoldrick** — G00422349  
+Atlantic Technological University
+
+---
+
+*This project was submitted in partial fulfilment of the requirements for the Bachelor of Science (Honours) in Software Development.*
