@@ -6,6 +6,9 @@ A full-stack web application that generates personalised, AI-driven programming 
 
 Adaptive difficulty is a core design goal. Rather than hardcoding difficulty, the system infers it through an ML pipeline trained on IBM Project CodeNet, a dataset of over four million competitive programming submissions across more than 4000 problems. A second ML model performs multi-label topic classification, trained on a LeetCode dataset, tagging each generated question with its primary algorithmic categories before it is returned to the user.
 
+## Screencast Demo
+**Youtube Link:** https://www.youtube.com/watch?v=aBWo7vzyTZA
+
 ## Table of Contents
 
 1. [Technology Stack](#technology-stack)

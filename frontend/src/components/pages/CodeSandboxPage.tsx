@@ -398,7 +398,7 @@ function CodeSandboxPage() {
                         });
                         if (xpRes.ok) {
                             const data = await xpRes.json();
-                            const { xp_gained: _xg, leveled_up: _lu, new_level: _nl, ...updatedUser } = data;
+                            const { xp_gained: _xg, leveled_up: _lu, new_level: _nl, ...updatedUser } = data; // eslint-disable-line @typescript-eslint/no-unused-vars
                             updateUser(updatedUser);
                         }
                     } catch { /* silently ignore network errors */ }
