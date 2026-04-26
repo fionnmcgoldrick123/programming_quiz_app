@@ -25,6 +25,10 @@ SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
 SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USERNAME or "")
 SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() in {"1", "true", "yes", "on"}
 
+# Set to True to require users to verify their email before logging in.
+# Set to False (default) to skip email verification entirely.
+REQUIRE_EMAIL_VERIFICATION = os.getenv("REQUIRE_EMAIL_VERIFICATION", "false").lower() in {"1", "true", "yes", "on"}
+
 # CORS Origins
 CORS_ORIGINS = [
     "http://localhost:5173",

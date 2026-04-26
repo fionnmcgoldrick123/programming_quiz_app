@@ -21,6 +21,7 @@ from config import (
     SMTP_PORT,
     SMTP_USERNAME,
     SMTP_USE_TLS,
+    REQUIRE_EMAIL_VERIFICATION,
 )
 from pydantic_models import RegisterRequest, LoginRequest, SaveQuizResultRequest, FriendRequestAction, UpdateProfileRequest
 
@@ -118,7 +119,7 @@ async def register_user(user_data: RegisterRequest):
                     user_data.second_name,
                     normalized_email,
                     password_hash_value,
-                    False,
+                    not REQUIRE_EMAIL_VERIFICATION,
                     verification_token,
                     verification_sent_at,
                 ),
@@ -185,7 +186,7 @@ async def login_user(login_data: LoginRequest):
     if not verify_password(login_data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    if not user.get("email_verified"):
+    if REQUIRE_EMAIL_VERIFICATION and not user.get("email_verified"):
         raise HTTPException(status_code=403, detail="Please verify your email address before logging in")
 
     token = create_access_token(user["id"], user["email"])
